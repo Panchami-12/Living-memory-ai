@@ -1,0 +1,42 @@
+from datetime import datetime
+
+from pydantic import BaseModel
+
+
+# =========================================================
+# CREATE MEMORY
+# =========================================================
+
+class MemoryCreate(BaseModel):
+    title: str
+    content: str
+    memory_type: str = "personal"
+    user_id: int = 1
+
+
+# =========================================================
+# MEMORY RESPONSE
+# =========================================================
+
+class MemoryResponse(BaseModel):
+    id: int
+    title: str
+    content: str
+    memory_type: str
+    user_id: int
+    created_at: datetime | None = None
+
+    # Photo attached to the memory
+    image_url: str | None = None
+    audio_url: str | None = None
+    class Config:
+        from_attributes = True
+
+
+# =========================================================
+# CHAT REQUEST
+# =========================================================
+
+class ChatRequest(BaseModel):
+    question: str
+    user_id: int = 1
