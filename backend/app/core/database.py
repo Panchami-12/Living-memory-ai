@@ -144,9 +144,24 @@ def add_missing_columns():
         )
 
     else:
-        print(
-            "Database already contains audio_url."
+        print("Database already contains audio_url."
         )
+
+    if "profile_id" not in existing_columns:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    """
+                    ALTER TABLE memories
+                    ADD COLUMN profile_id INTEGER
+                    """
+                )            )
+
+        print("Database updated: profile_id column added.")
+
+    else:
+        print("Database already contains profile_id.")
+
 # =========================================================
 # RUN DATABASE MIGRATION
 # =========================================================

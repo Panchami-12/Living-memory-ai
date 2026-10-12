@@ -2,9 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 import VoiceRecorder from "./VoiceRecorder";
 
-const API = "http://127.0.0.1:8000";
+const API = "http://127.0.0.1:8001";
 
 function App() {
+  // =====================================================
+  // AUTH
+  // =====================================================
+
   const [loggedIn, setLoggedIn] = useState(
     localStorage.getItem("loggedIn") === "true",
   );
@@ -27,6 +31,10 @@ function App() {
     Number(localStorage.getItem("user_id")) || null,
   );
 
+  // =====================================================
+  // MEMORY
+  // =====================================================
+
   const [memories, setMemories] = useState([]);
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -34,16 +42,29 @@ function App() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [memoryType, setMemoryType] = useState("personal");
+  const [selectedProfileId, setSelectedProfileId] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [memoryMessage, setMemoryMessage] = useState("");
+
+  // =====================================================
+  // IMAGE
+  // =====================================================
 
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
 
+  // =====================================================
+  // AUDIO
+  // =====================================================
+
   const [selectedAudio, setSelectedAudio] = useState(null);
   const [uploadingAudio, setUploadingAudio] = useState(false);
+
+  // =====================================================
+  // EDIT
+  // =====================================================
 
   const [editingMemoryId, setEditingMemoryId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
@@ -51,16 +72,861 @@ function App() {
   const [editMemoryType, setEditMemoryType] = useState("personal");
   const [editLoading, setEditLoading] = useState(false);
 
+  // =====================================================
+  // AI CHAT
+  // =====================================================
+
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
   const [loadingAI, setLoadingAI] = useState(false);
 
-  /* =====================================================
-     IMAGE
-  ===================================================== */
+  // =====================================================
+  // RELATIONSHIP PROFILES
+  // =====================================================
+
+  const [profiles, setProfiles] = useState([]);
+  const [activeProfileFilter, setActiveProfileFilter] = useState(null);
+  const [showProfileForm, setShowProfileForm] = useState(false);
+  const [identitySummaries, setIdentitySummaries] = useState({});
+  const [identityLoadingId, setIdentityLoadingId] = useState(null);
+  const [identityErrors, setIdentityErrors] = useState({});
+  const [profileName, setProfileName] = useState("");
+  const [profileRelationship, setProfileRelationship] = useState("");
+  const [profileDescription, setProfileDescription] = useState("");
+  const [profileMessage, setProfileMessage] = useState("");
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  // =====================================================
+  // LANGUAGE
+  // =====================================================
+
+  const [language, setLanguage] = useState(
+    localStorage.getItem("language") || "English",
+  );
+
+  const languages = [
+    {
+      name: "English",
+      code: "en",
+      native: "English",
+    },
+    {
+      name: "Kannada",
+      code: "kn",
+      native: "ಕನ್ನಡ",
+    },
+    {
+      name: "Hindi",
+      code: "hi",
+      native: "हिन्दी",
+    },
+    {
+      name: "Tamil",
+      code: "ta",
+      native: "தமிழ்",
+    },
+    {
+      name: "Malayalam",
+      code: "ml",
+      native: "മലയാളം",
+    },
+  ];
+
+  // =====================================================
+  // TRANSLATIONS
+  // =====================================================
+
+  const translations = {
+    English: {
+      home: "Home",
+      features: "Features",
+      memories: "Memories",
+      about: "About",
+      logout: "Logout",
+
+      welcome: "Welcome back",
+      startJourney: "Start your memory journey",
+      preserveStory: "Preserve Your Story",
+      welcomeText: "Keep your precious memories safe and talk to them anytime.",
+      createAccount: "Create Your Account",
+      createText:
+        "Create a private space for your stories, photos and voice memories.",
+
+      login: "Login →",
+      creating: "Creating...",
+      loggingIn: "Logging in...",
+      signup: "Don't have an account? Sign up",
+      alreadyAccount: "Already have an account? Login",
+
+      aiPowered: "AI Powered Memory Keeper",
+      heroTitle: "Your Memories. Your Legacy.",
+      heroText:
+        "Living Memory AI helps you preserve your precious memories, stories, photos and voices in one secure place and lets you relive them anytime.",
+
+      getStarted: "Get Started →",
+      learnMore: "▶ Learn More",
+
+      preserveMoments: "Preserve the moments",
+      thatMatter: "that matter most.",
+
+      aiMemoryChat: "AI Memory Chat",
+      askPast: "Ask about your past.",
+
+      voiceMemoryCard: "Voice Memory",
+      recordMoments: "Record precious moments.",
+
+      photoMemoryCard: "Photo Memory",
+      keepVisual: "Keep memories visual.",
+
+      privateMemories: "Private Memories",
+      secureAlways: "Secure. Private. Always yours.",
+
+      featuresTitle: "Everything Your Memories Need",
+
+      textMemories: "Text Memories",
+      textMemoriesDesc:
+        "Write down your thoughts, stories and special moments.",
+
+      photoMemories: "Photo Memories",
+      photoMemoriesDesc: "Upload and store photos safely with your memories.",
+
+      voiceMemories: "Voice Memories",
+      voiceMemoriesDesc: "Record your precious words and conversations.",
+
+      aiChat: "AI Chat",
+      aiChatDesc: "Talk with your memories using AI and revisit the past.",
+
+      smartSearch: "Smart Search",
+      smartSearchDesc: "Find your memories quickly using keywords.",
+
+      secure: "Secure & Private",
+      secureDesc: "Your memories stay connected to your personal account.",
+
+      memoriesSaved: "Memories Saved",
+      memoryFormats: "Memory Formats",
+      memoryAssistant: "Memory Assistant",
+      storyAvailable: "Your Story Available",
+
+      talkMemories: "Talk to Your Memories",
+      aiResponses: "AI responses:",
+      askPlaceholder: "Ask something about your memories...",
+      askAI: "Ask Living Memory AI",
+      thinking: "Thinking...",
+      askAnything: "Ask me anything about your saved memories.",
+
+      findMemory: "Find a Memory",
+      searchPlaceholder: "Search your memories...",
+      noResults: "No matching memories found.",
+      searchResultsFor: "Results for",
+
+      saveMemory: "Save a New Memory",
+      titlePlaceholder: "Give your memory a title...",
+      memoryPlaceholder: "Write your memory here...",
+      addPhoto: "📸 Add a Photo",
+      removePhoto: "❌ Remove Photo",
+      save: "Save Memory 💜",
+      saving: "Saving...",
+
+      myMemories: "My Memories",
+      refresh: "🔄 Refresh",
+      waiting: "Your memory collection is waiting ✨",
+      firstMemory: "Save your first special moment above.",
+
+      edit: "✏️ Edit",
+      delete: "🗑️ Delete",
+      editMemory: "✏️ Edit Memory",
+      saveChanges: "💾 Save Changes",
+      cancel: "Cancel",
+
+      titleLabel: "Title",
+      memoryTypeLabel: "Memory Type",
+      memoryLabel: "Memory",
+      voiceMemoryLabel: "Voice Memory",
+
+      aboutTitle: "🌟 About Living Memory AI",
+      aboutText:
+        "A personal digital space where your stories, photos and voice memories can be preserved and explored through AI.",
+
+      memoryStorage: "Memory Storage",
+      memoryStorageDesc: "Save important personal memories.",
+
+      voiceMemory: "Voice Memory",
+      voiceMemoryDesc: "Speak your memories instead of typing.",
+
+      photoMemory: "Photo Memories",
+      photoMemoryDesc: "Attach photos to meaningful moments.",
+
+      aiConversation: "AI Conversation",
+      aiConversationDesc: "Ask questions about your saved memories.",
+
+      memoriesLive: "Memories live forever.",
+      footerCopy: "© 2026 Living Memory AI — Your memories, your story.",
+
+      personal: "Personal",
+      college: "College",
+      family: "Family",
+      friends: "Friends",
+      achievement: "Achievement",
+      project: "Project",
+      food: "Food",
+      travel: "Travel",
+      other: "Other",
+
+      email: "Email",
+      password: "Password",
+      username: "Username",
+
+      you: "You",
+
+      quickQuestions: [
+        "What project am I currently working on?",
+        "Tell me about my college journey.",
+        "What are some important things I have saved?",
+      ],
+
+      voiceRecorded: "🎤 Voice recorded. Save the memory.",
+
+      voiceReady: "🎤 Voice recording ready to save.",
+    },
+
+    Kannada: {
+      home: "ಮುಖಪುಟ",
+      features: "ವೈಶಿಷ್ಟ್ಯಗಳು",
+      memories: "ನೆನಪುಗಳು",
+      about: "ನಮ್ಮ ಬಗ್ಗೆ",
+      logout: "ಲಾಗ್ ಔಟ್",
+
+      welcome: "ಮತ್ತೆ ಸ್ವಾಗತ",
+      startJourney: "ನಿಮ್ಮ ನೆನಪಿನ ಪ್ರಯಾಣ ಪ್ರಾರಂಭಿಸಿ",
+      preserveStory: "ನಿಮ್ಮ ಕಥೆಯನ್ನು ಉಳಿಸಿ",
+      welcomeText:
+        "ನಿಮ್ಮ ಅಮೂಲ್ಯ ನೆನಪುಗಳನ್ನು ಸುರಕ್ಷಿತವಾಗಿ ಉಳಿಸಿ ಮತ್ತು ಯಾವಾಗ ಬೇಕಾದರೂ ಅವುಗಳೊಂದಿಗೆ ಮಾತನಾಡಿ.",
+      createAccount: "ಖಾತೆ ರಚಿಸಿ",
+      createText:
+        "ನಿಮ್ಮ ಕಥೆಗಳು, ಫೋಟೋಗಳು ಮತ್ತು ಧ್ವನಿ ನೆನಪುಗಳಿಗಾಗಿ ಖಾಸಗಿ ಸ್ಥಳವನ್ನು ರಚಿಸಿ.",
+
+      login: "ಲಾಗಿನ್ →",
+      creating: "ರಚಿಸಲಾಗುತ್ತಿದೆ...",
+      loggingIn: "ಲಾಗಿನ್ ಆಗುತ್ತಿದೆ...",
+      signup: "ಖಾತೆ ಇಲ್ಲವೇ? ಸೈನ್ ಅಪ್ ಮಾಡಿ",
+      alreadyAccount: "ಈಗಾಗಲೇ ಖಾತೆ ಇದೆಯೇ? ಲಾಗಿನ್ ಮಾಡಿ",
+
+      aiPowered: "AI ಆಧಾರಿತ ನೆನಪು ಸಂರಕ್ಷಕ",
+      heroTitle: "ನಿಮ್ಮ ನೆನಪುಗಳು. ನಿಮ್ಮ ಪರಂಪರೆ.",
+      heroText:
+        "Living Memory AI ನಿಮ್ಮ ಅಮೂಲ್ಯ ನೆನಪುಗಳು, ಕಥೆಗಳು, ಫೋಟೋಗಳು ಮತ್ತು ಧ್ವನಿಗಳನ್ನು ಸುರಕ್ಷಿತವಾಗಿ ಉಳಿಸಲು ಸಹಾಯ ಮಾಡುತ್ತದೆ.",
+
+      getStarted: "ಪ್ರಾರಂಭಿಸಿ →",
+      learnMore: "▶ ಇನ್ನಷ್ಟು ತಿಳಿಯಿರಿ",
+
+      preserveMoments: "ಅಮೂಲ್ಯ ಕ್ಷಣಗಳನ್ನು ಉಳಿಸಿ",
+      thatMatter: "ಅವು ನಿಮಗೆ ಸದಾ ನೆನಪಾಗಿರಲಿ.",
+
+      aiMemoryChat: "AI ನೆನಪು ಚಾಟ್",
+      askPast: "ನಿಮ್ಮ ಹಿಂದಿನ ಬಗ್ಗೆ ಕೇಳಿ.",
+
+      voiceMemoryCard: "ಧ್ವನಿ ನೆನಪು",
+      recordMoments: "ಅಮೂಲ್ಯ ಕ್ಷಣಗಳನ್ನು ದಾಖಲಿಸಿ.",
+
+      photoMemoryCard: "ಫೋಟೋ ನೆನಪು",
+      keepVisual: "ನೆನಪುಗಳನ್ನು ಚಿತ್ರಗಳಾಗಿ ಉಳಿಸಿ.",
+
+      privateMemories: "ಖಾಸಗಿ ನೆನಪುಗಳು",
+      secureAlways: "ಸುರಕ್ಷಿತ. ಖಾಸಗಿ. ಯಾವಾಗಲೂ ನಿಮ್ಮದು.",
+
+      featuresTitle: "ನಿಮ್ಮ ನೆನಪುಗಳಿಗೆ ಬೇಕಾದ ಎಲ್ಲವೂ",
+
+      textMemories: "ಪಠ್ಯ ನೆನಪುಗಳು",
+      textMemoriesDesc:
+        "ನಿಮ್ಮ ಆಲೋಚನೆಗಳು, ಕಥೆಗಳು ಮತ್ತು ವಿಶೇಷ ಕ್ಷಣಗಳನ್ನು ಬರೆಯಿರಿ.",
+
+      photoMemories: "ಫೋಟೋ ನೆನಪುಗಳು",
+      photoMemoriesDesc: "ನಿಮ್ಮ ನೆನಪುಗಳೊಂದಿಗೆ ಫೋಟೋಗಳನ್ನು ಸುರಕ್ಷಿತವಾಗಿ ಉಳಿಸಿ.",
+
+      voiceMemories: "ಧ್ವನಿ ನೆನಪುಗಳು",
+      voiceMemoriesDesc: "ನಿಮ್ಮ ಅಮೂಲ್ಯ ಮಾತುಗಳು ಮತ್ತು ಸಂಭಾಷಣೆಗಳನ್ನು ದಾಖಲಿಸಿ.",
+
+      aiChat: "AI ಚಾಟ್",
+      aiChatDesc: "AI ಮೂಲಕ ನಿಮ್ಮ ನೆನಪುಗಳೊಂದಿಗೆ ಮಾತನಾಡಿ.",
+
+      smartSearch: "ಸ್ಮಾರ್ಟ್ ಹುಡುಕಾಟ",
+      smartSearchDesc: "ಕೀವರ್ಡ್‌ಗಳ ಮೂಲಕ ನಿಮ್ಮ ನೆನಪುಗಳನ್ನು ವೇಗವಾಗಿ ಹುಡುಕಿ.",
+
+      secure: "ಸುರಕ್ಷಿತ ಮತ್ತು ಖಾಸಗಿ",
+      secureDesc: "ನಿಮ್ಮ ನೆನಪುಗಳು ನಿಮ್ಮ ಖಾಸಗಿ ಖಾತೆಯಲ್ಲೇ ಸುರಕ್ಷಿತವಾಗಿರುತ್ತವೆ.",
+
+      memoriesSaved: "ಉಳಿಸಿದ ನೆನಪುಗಳು",
+      memoryFormats: "ನೆನಪಿನ ಸ್ವರೂಪಗಳು",
+      memoryAssistant: "ನೆನಪು ಸಹಾಯಕ",
+      storyAvailable: "ನಿಮ್ಮ ಕಥೆ ಲಭ್ಯವಿದೆ",
+
+      talkMemories: "ನಿಮ್ಮ ನೆನಪುಗಳೊಂದಿಗೆ ಮಾತನಾಡಿ",
+      aiResponses: "AI ಉತ್ತರಗಳು:",
+      askPlaceholder: "ನಿಮ್ಮ ನೆನಪುಗಳ ಬಗ್ಗೆ ಏನಾದರೂ ಕೇಳಿ...",
+      askAI: "Living Memory AI ಅನ್ನು ಕೇಳಿ",
+      thinking: "ಯೋಚಿಸುತ್ತಿದೆ...",
+      askAnything: "ನಿಮ್ಮ ಉಳಿಸಿದ ನೆನಪುಗಳ ಬಗ್ಗೆ ಏನಾದರೂ ಕೇಳಿ.",
+
+      findMemory: "ನೆನಪು ಹುಡುಕಿ",
+      searchPlaceholder: "ನಿಮ್ಮ ನೆನಪುಗಳನ್ನು ಹುಡುಕಿ...",
+      noResults: "ಯಾವುದೇ ನೆನಪುಗಳು ಕಂಡುಬಂದಿಲ್ಲ.",
+      searchResultsFor: "ಫಲಿತಾಂಶಗಳು",
+
+      saveMemory: "ಹೊಸ ನೆನಪು ಉಳಿಸಿ",
+      titlePlaceholder: "ನಿಮ್ಮ ನೆನಪಿಗೆ ಶೀರ್ಷಿಕೆ ನೀಡಿ...",
+      memoryPlaceholder: "ನಿಮ್ಮ ನೆನಪನ್ನು ಇಲ್ಲಿ ಬರೆಯಿರಿ...",
+      addPhoto: "📸 ಫೋಟೋ ಸೇರಿಸಿ",
+      removePhoto: "❌ ಫೋಟೋ ತೆಗೆದುಹಾಕಿ",
+      save: "ನೆನಪು ಉಳಿಸಿ 💜",
+      saving: "ಉಳಿಸಲಾಗುತ್ತಿದೆ...",
+
+      myMemories: "ನನ್ನ ನೆನಪುಗಳು",
+      refresh: "🔄 ರಿಫ್ರೆಶ್",
+      waiting: "ನಿಮ್ಮ ನೆನಪುಗಳ ಸಂಗ್ರಹ ಕಾಯುತ್ತಿದೆ ✨",
+      firstMemory: "ಮೇಲೆ ನಿಮ್ಮ ಮೊದಲ ವಿಶೇಷ ಕ್ಷಣವನ್ನು ಉಳಿಸಿ.",
+
+      edit: "✏️ ಸಂಪಾದಿಸಿ",
+      delete: "🗑️ ಅಳಿಸಿ",
+      editMemory: "✏️ ನೆನಪು ಸಂಪಾದಿಸಿ",
+      saveChanges: "💾 ಬದಲಾವಣೆ ಉಳಿಸಿ",
+      cancel: "ರದ್ದುಮಾಡಿ",
+
+      titleLabel: "ಶೀರ್ಷಿಕೆ",
+      memoryTypeLabel: "ನೆನಪಿನ ಪ್ರಕಾರ",
+      memoryLabel: "ನೆನಪು",
+      voiceMemoryLabel: "ಧ್ವನಿ ನೆನಪು",
+
+      aboutTitle: "🌟 Living Memory AI ಬಗ್ಗೆ",
+      aboutText:
+        "ನಿಮ್ಮ ಕಥೆಗಳು, ಫೋಟೋಗಳು ಮತ್ತು ಧ್ವನಿ ನೆನಪುಗಳನ್ನು AI ಮೂಲಕ ಉಳಿಸಿ ಮತ್ತು ಅನುಭವಿಸುವ ವೈಯಕ್ತಿಕ ಡಿಜಿಟಲ್ ಸ್ಥಳ.",
+
+      memoryStorage: "ನೆನಪು ಸಂಗ್ರಹ",
+      memoryStorageDesc: "ಮುಖ್ಯ ವೈಯಕ್ತಿಕ ನೆನಪುಗಳನ್ನು ಉಳಿಸಿ.",
+
+      voiceMemory: "ಧ್ವನಿ ನೆನಪು",
+      voiceMemoryDesc: "ಟೈಪ್ ಮಾಡುವ ಬದಲು ನಿಮ್ಮ ನೆನಪುಗಳನ್ನು ಮಾತನಾಡಿ.",
+
+      photoMemory: "ಫೋಟೋ ನೆನಪುಗಳು",
+      photoMemoryDesc: "ಅರ್ಥಪೂರ್ಣ ಕ್ಷಣಗಳಿಗೆ ಫೋಟೋಗಳನ್ನು ಸೇರಿಸಿ.",
+
+      aiConversation: "AI ಸಂಭಾಷಣೆ",
+      aiConversationDesc: "ನಿಮ್ಮ ಉಳಿಸಿದ ನೆನಪುಗಳ ಬಗ್ಗೆ ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ.",
+
+      memoriesLive: "ನೆನಪುಗಳು ಸದಾ ಜೀವಂತವಾಗಿರುತ್ತವೆ.",
+
+      footerCopy: "© 2026 Living Memory AI — ನಿಮ್ಮ ನೆನಪುಗಳು, ನಿಮ್ಮ ಕಥೆ.",
+
+      personal: "ವೈಯಕ್ತಿಕ",
+      college: "ಕಾಲೇಜು",
+      family: "ಕುಟುಂಬ",
+      friends: "ಸ್ನೇಹಿತರು",
+      achievement: "ಸಾಧನೆ",
+      project: "ಪ್ರಾಜೆಕ್ಟ್",
+      food: "ಆಹಾರ",
+      travel: "ಪ್ರಯಾಣ",
+      other: "ಇತರೆ",
+
+      email: "ಇಮೇಲ್",
+      password: "ಪಾಸ್‌ವರ್ಡ್",
+      username: "ಬಳಕೆದಾರ ಹೆಸರು",
+
+      you: "ನೀವು",
+
+      quickQuestions: [
+        "ನಾನು ಪ್ರಸ್ತುತ ಯಾವ ಪ್ರಾಜೆಕ್ಟ್‌ನಲ್ಲಿ ಕೆಲಸ ಮಾಡುತ್ತಿದ್ದೇನೆ?",
+        "ನನ್ನ ಕಾಲೇಜು ಪ್ರಯಾಣದ ಬಗ್ಗೆ ಹೇಳಿ.",
+        "ನಾನು ಉಳಿಸಿರುವ ಕೆಲವು ಪ್ರಮುಖ ವಿಷಯಗಳು ಯಾವುವು?",
+      ],
+
+      voiceRecorded: "🎤 ಧ್ವನಿ ದಾಖಲಾಗಿದೆ. ನೆನಪನ್ನು ಉಳಿಸಿ.",
+
+      voiceReady: "🎤 ಧ್ವನಿ ದಾಖಲೆ ಉಳಿಸಲು ಸಿದ್ಧವಾಗಿದೆ.",
+    },
+
+    Hindi: {
+      home: "होम",
+      features: "फीचर्स",
+      memories: "यादें",
+      about: "हमारे बारे में",
+      logout: "लॉग आउट",
+
+      welcome: "वापसी पर स्वागत है",
+      startJourney: "अपनी यादों की यात्रा शुरू करें",
+      preserveStory: "अपनी कहानी सुरक्षित रखें",
+      welcomeText: "अपनी अनमोल यादों को सुरक्षित रखें और उनसे कभी भी बात करें।",
+      createAccount: "खाता बनाएं",
+      createText:
+        "अपनी कहानियों, तस्वीरों और आवाज़ की यादों के लिए एक निजी स्थान बनाएं।",
+
+      login: "लॉगिन →",
+      creating: "बनाया जा रहा है...",
+      loggingIn: "लॉगिन हो रहा है...",
+      signup: "खाता नहीं है? साइन अप करें",
+      alreadyAccount: "पहले से खाता है? लॉगिन करें",
+
+      aiPowered: "AI पावर्ड मेमोरी कीपर",
+      heroTitle: "आपकी यादें। आपकी विरासत।",
+      heroText:
+        "Living Memory AI आपकी यादों, कहानियों, तस्वीरों और आवाज़ों को सुरक्षित रखने में मदद करता है।",
+
+      getStarted: "शुरू करें →",
+      learnMore: "▶ और जानें",
+
+      preserveMoments: "उन पलों को सुरक्षित रखें",
+      thatMatter: "जो आपके लिए सबसे खास हैं।",
+
+      aiMemoryChat: "AI मेमोरी चैट",
+      askPast: "अपने अतीत के बारे में पूछें।",
+
+      voiceMemoryCard: "वॉइस मेमोरी",
+      recordMoments: "खास पलों को रिकॉर्ड करें।",
+
+      photoMemoryCard: "फोटो मेमोरी",
+      keepVisual: "यादों को तस्वीरों के रूप में रखें।",
+
+      privateMemories: "निजी यादें",
+      secureAlways: "सुरक्षित। निजी। हमेशा आपकी।",
+
+      featuresTitle: "आपकी यादों के लिए सब कुछ",
+
+      textMemories: "टेक्स्ट यादें",
+      textMemoriesDesc: "अपने विचार, कहानियां और खास पल लिखें।",
+
+      photoMemories: "फोटो यादें",
+      photoMemoriesDesc: "अपनी यादों के साथ तस्वीरें सुरक्षित रखें।",
+
+      voiceMemories: "आवाज़ की यादें",
+      voiceMemoriesDesc: "अपनी खास बातें और बातचीत रिकॉर्ड करें।",
+
+      aiChat: "AI चैट",
+      aiChatDesc: "AI की मदद से अपनी यादों से बात करें।",
+
+      smartSearch: "स्मार्ट सर्च",
+      smartSearchDesc: "कीवर्ड की मदद से अपनी यादें जल्दी खोजें।",
+
+      secure: "सुरक्षित और निजी",
+      secureDesc: "आपकी यादें आपके निजी अकाउंट में सुरक्षित रहती हैं।",
+
+      memoriesSaved: "सेव की गई यादें",
+      memoryFormats: "यादों के फॉर्मेट",
+      memoryAssistant: "मेमोरी असिस्टेंट",
+      storyAvailable: "आपकी कहानी उपलब्ध है",
+
+      talkMemories: "अपनी यादों से बात करें",
+      aiResponses: "AI उत्तर:",
+      askPlaceholder: "अपनी यादों के बारे में कुछ पूछें...",
+      askAI: "Living Memory AI से पूछें",
+      thinking: "सोच रहा है...",
+      askAnything: "अपनी सेव की गई यादों के बारे में कुछ भी पूछें।",
+
+      findMemory: "याद खोजें",
+      searchPlaceholder: "अपनी यादें खोजें...",
+      noResults: "कोई याद नहीं मिली।",
+      searchResultsFor: "परिणाम",
+
+      saveMemory: "नई याद सेव करें",
+      titlePlaceholder: "अपनी याद को एक शीर्षक दें...",
+      memoryPlaceholder: "अपनी याद यहां लिखें...",
+      addPhoto: "📸 फोटो जोड़ें",
+      removePhoto: "❌ फोटो हटाएं",
+      save: "याद सेव करें 💜",
+      saving: "सेव हो रहा है...",
+
+      myMemories: "मेरी यादें",
+      refresh: "🔄 रिफ्रेश",
+      waiting: "आपकी यादों का संग्रह आपका इंतजार कर रहा है ✨",
+      firstMemory: "ऊपर अपनी पहली खास याद सेव करें।",
+
+      edit: "✏️ एडिट",
+      delete: "🗑️ डिलीट",
+      editMemory: "✏️ याद एडिट करें",
+      saveChanges: "💾 बदलाव सेव करें",
+      cancel: "रद्द करें",
+
+      titleLabel: "शीर्षक",
+      memoryTypeLabel: "याद का प्रकार",
+      memoryLabel: "याद",
+      voiceMemoryLabel: "वॉइस मेमोरी",
+
+      aboutTitle: "🌟 Living Memory AI के बारे में",
+      aboutText:
+        "आपकी कहानियों, तस्वीरों और आवाज़ की यादों को AI के माध्यम से सुरक्षित रखने का निजी डिजिटल स्थान।",
+
+      memoryStorage: "मेमोरी स्टोरेज",
+      memoryStorageDesc: "महत्वपूर्ण व्यक्तिगत यादें सेव करें।",
+
+      voiceMemory: "वॉइस मेमोरी",
+      voiceMemoryDesc: "टाइप करने के बजाय अपनी यादें बोलें।",
+
+      photoMemory: "फोटो यादें",
+      photoMemoryDesc: "खास पलों के साथ तस्वीरें जोड़ें।",
+
+      aiConversation: "AI बातचीत",
+      aiConversationDesc: "अपनी सेव की गई यादों के बारे में सवाल पूछें।",
+
+      memoriesLive: "यादें हमेशा जीवित रहती हैं।",
+
+      footerCopy: "© 2026 Living Memory AI — आपकी यादें, आपकी कहानी।",
+
+      personal: "व्यक्तिगत",
+      college: "कॉलेज",
+      family: "परिवार",
+      friends: "दोस्त",
+      achievement: "उपलब्धि",
+      project: "प्रोजेक्ट",
+      food: "खाना",
+      travel: "यात्रा",
+      other: "अन्य",
+
+      email: "ईमेल",
+      password: "पासवर्ड",
+      username: "यूज़रनेम",
+
+      you: "आप",
+
+      quickQuestions: [
+        "मैं अभी किस प्रोजेक्ट पर काम कर रहा/रही हूँ?",
+        "मेरी कॉलेज यात्रा के बारे में बताएं।",
+        "मैंने कौन-सी महत्वपूर्ण चीजें सेव की हैं?",
+      ],
+
+      voiceRecorded: "🎤 आवाज़ रिकॉर्ड हो गई। याद सेव करें।",
+
+      voiceReady: "🎤 वॉइस रिकॉर्डिंग सेव करने के लिए तैयार है।",
+    },
+
+    Tamil: {
+      home: "முகப்பு",
+      features: "அம்சங்கள்",
+      memories: "நினைவுகள்",
+      about: "எங்களை பற்றி",
+      logout: "வெளியேறு",
+
+      welcome: "மீண்டும் வரவேற்கிறோம்",
+      startJourney: "உங்கள் நினைவுப் பயணத்தை தொடங்குங்கள்",
+      preserveStory: "உங்கள் கதையை பாதுகாக்கவும்",
+      welcomeText:
+        "உங்கள் மதிப்புமிக்க நினைவுகளை பாதுகாப்பாக சேமித்து எப்போது வேண்டுமானாலும் அவற்றுடன் பேசுங்கள்.",
+      createAccount: "கணக்கை உருவாக்கவும்",
+      createText:
+        "உங்கள் கதைகள், புகைப்படங்கள் மற்றும் குரல் நினைவுகளுக்கான தனிப்பட்ட இடத்தை உருவாக்குங்கள்.",
+
+      login: "உள்நுழைவு →",
+      creating: "உருவாக்கப்படுகிறது...",
+      loggingIn: "உள்நுழைகிறது...",
+      signup: "கணக்கு இல்லையா? பதிவு செய்யுங்கள்",
+      alreadyAccount: "ஏற்கனவே கணக்கு உள்ளதா? உள்நுழையுங்கள்",
+
+      aiPowered: "AI நினைவு பாதுகாப்பாளர்",
+      heroTitle: "உங்கள் நினைவுகள். உங்கள் பாரம்பரியம்.",
+      heroText:
+        "Living Memory AI உங்கள் நினைவுகள், கதைகள், புகைப்படங்கள் மற்றும் குரல்களை பாதுகாப்பாக சேமிக்க உதவுகிறது.",
+
+      getStarted: "தொடங்குங்கள் →",
+      learnMore: "▶ மேலும் அறிக",
+
+      preserveMoments: "முக்கியமான தருணங்களை பாதுகாக்கவும்",
+      thatMatter: "அவை எப்போதும் நினைவில் இருக்கட்டும்.",
+
+      aiMemoryChat: "AI நினைவு அரட்டை",
+      askPast: "உங்கள் கடந்த காலத்தைப் பற்றி கேளுங்கள்.",
+
+      voiceMemoryCard: "குரல் நினைவு",
+      recordMoments: "முக்கியமான தருணங்களை பதிவு செய்யுங்கள்.",
+
+      photoMemoryCard: "புகைப்பட நினைவு",
+      keepVisual: "நினைவுகளை படங்களாக பாதுகாக்கவும்.",
+
+      privateMemories: "தனிப்பட்ட நினைவுகள்",
+      secureAlways: "பாதுகாப்பானது. தனிப்பட்டது. எப்போதும் உங்களுடையது.",
+
+      featuresTitle: "உங்கள் நினைவுகளுக்கு தேவையான அனைத்தும்",
+
+      textMemories: "உரை நினைவுகள்",
+      textMemoriesDesc:
+        "உங்கள் எண்ணங்கள், கதைகள் மற்றும் சிறப்பு தருணங்களை எழுதுங்கள்.",
+
+      photoMemories: "புகைப்பட நினைவுகள்",
+      photoMemoriesDesc:
+        "உங்கள் நினைவுகளுடன் புகைப்படங்களை பாதுகாப்பாக சேமியுங்கள்.",
+
+      voiceMemories: "குரல் நினைவுகள்",
+      voiceMemoriesDesc:
+        "உங்கள் முக்கியமான வார்த்தைகள் மற்றும் உரையாடல்களை பதிவு செய்யுங்கள்.",
+
+      aiChat: "AI அரட்டை",
+      aiChatDesc: "AI மூலம் உங்கள் நினைவுகளுடன் பேசுங்கள்.",
+
+      smartSearch: "ஸ்மார்ட் தேடல்",
+      smartSearchDesc:
+        "முக்கிய சொற்களைப் பயன்படுத்தி நினைவுகளை விரைவாகக் கண்டறியுங்கள்.",
+
+      secure: "பாதுகாப்பானது மற்றும் தனிப்பட்டது",
+      secureDesc:
+        "உங்கள் நினைவுகள் உங்கள் தனிப்பட்ட கணக்கில் பாதுகாப்பாக இருக்கும்.",
+
+      memoriesSaved: "சேமிக்கப்பட்ட நினைவுகள்",
+      memoryFormats: "நினைவு வடிவங்கள்",
+      memoryAssistant: "நினைவு உதவியாளர்",
+      storyAvailable: "உங்கள் கதை கிடைக்கிறது",
+
+      talkMemories: "உங்கள் நினைவுகளுடன் பேசுங்கள்",
+      aiResponses: "AI பதில்கள்:",
+      askPlaceholder: "உங்கள் நினைவுகளைப் பற்றி ஏதாவது கேளுங்கள்...",
+      askAI: "Living Memory AI-யிடம் கேளுங்கள்",
+      thinking: "யோசிக்கிறது...",
+      askAnything: "சேமித்த நினைவுகளைப் பற்றி ஏதாவது கேளுங்கள்.",
+
+      findMemory: "நினைவைத் தேடுங்கள்",
+      searchPlaceholder: "உங்கள் நினைவுகளைத் தேடுங்கள்...",
+      noResults: "பொருத்தமான நினைவுகள் எதுவும் கிடைக்கவில்லை.",
+      searchResultsFor: "முடிவுகள்",
+
+      saveMemory: "புதிய நினைவை சேமிக்கவும்",
+      titlePlaceholder: "உங்கள் நினைவுக்கு தலைப்பு கொடுங்கள்...",
+      memoryPlaceholder: "உங்கள் நினைவை இங்கே எழுதுங்கள்...",
+      addPhoto: "📸 புகைப்படம் சேர்க்கவும்",
+      removePhoto: "❌ புகைப்படத்தை அகற்றவும்",
+      save: "நினைவை சேமிக்கவும் 💜",
+      saving: "சேமிக்கப்படுகிறது...",
+
+      myMemories: "என் நினைவுகள்",
+      refresh: "🔄 புதுப்பிக்கவும்",
+      waiting: "உங்கள் நினைவுத் தொகுப்பு காத்திருக்கிறது ✨",
+      firstMemory: "மேலே உங்கள் முதல் சிறப்பு நினைவை சேமிக்கவும்.",
+
+      edit: "✏️ திருத்து",
+      delete: "🗑️ நீக்கு",
+      editMemory: "✏️ நினைவை திருத்து",
+      saveChanges: "💾 மாற்றங்களை சேமி",
+      cancel: "ரத்து செய்",
+
+      titleLabel: "தலைப்பு",
+      memoryTypeLabel: "நினைவு வகை",
+      memoryLabel: "நினைவு",
+      voiceMemoryLabel: "குரல் நினைவு",
+
+      aboutTitle: "🌟 Living Memory AI பற்றி",
+      aboutText:
+        "உங்கள் கதைகள், புகைப்படங்கள் மற்றும் குரல் நினைவுகளை AI மூலம் பாதுகாத்து அனுபவிக்கக்கூடிய தனிப்பட்ட டிஜிட்டல் இடம்.",
+
+      memoryStorage: "நினைவு சேமிப்பு",
+      memoryStorageDesc: "முக்கியமான தனிப்பட்ட நினைவுகளை சேமிக்கவும்.",
+
+      voiceMemory: "குரல் நினைவு",
+      voiceMemoryDesc: "தட்டச்சு செய்வதற்கு பதிலாக உங்கள் நினைவுகளை பேசுங்கள்.",
+
+      photoMemory: "புகைப்பட நினைவுகள்",
+      photoMemoryDesc: "முக்கியமான தருணங்களுடன் புகைப்படங்களை இணைக்கவும்.",
+
+      aiConversation: "AI உரையாடல்",
+      aiConversationDesc: "சேமித்த நினைவுகளைப் பற்றி கேள்விகள் கேளுங்கள்.",
+
+      memoriesLive: "நினைவுகள் என்றும் வாழும்.",
+
+      footerCopy: "© 2026 Living Memory AI — உங்கள் நினைவுகள், உங்கள் கதை.",
+
+      personal: "தனிப்பட்ட",
+      college: "கல்லூரி",
+      family: "குடும்பம்",
+      friends: "நண்பர்கள்",
+      achievement: "சாதனை",
+      project: "திட்டம்",
+      food: "உணவு",
+      travel: "பயணம்",
+      other: "மற்றவை",
+
+      email: "மின்னஞ்சல்",
+      password: "கடவுச்சொல்",
+      username: "பயனர்பெயர்",
+
+      you: "நீங்கள்",
+
+      quickQuestions: [
+        "நான் தற்போது எந்த திட்டத்தில் வேலை செய்கிறேன்?",
+        "எனது கல்லூரி பயணத்தைப் பற்றி சொல்லுங்கள்.",
+        "நான் சேமித்துள்ள முக்கியமான விஷயங்கள் என்ன?",
+      ],
+
+      voiceRecorded: "🎤 குரல் பதிவு செய்யப்பட்டது. நினைவை சேமிக்கவும்.",
+
+      voiceReady: "🎤 குரல் பதிவு சேமிக்க தயாராக உள்ளது.",
+    },
+
+    Malayalam: {
+      home: "ഹോം",
+      features: "സവിശേഷതകൾ",
+      memories: "ഓർമ്മകൾ",
+      about: "ഞങ്ങളെക്കുറിച്ച്",
+      logout: "ലോഗ് ഔട്ട്",
+
+      welcome: "വീണ്ടും സ്വാഗതം",
+      startJourney: "നിങ്ങളുടെ ഓർമ്മ യാത്ര ആരംഭിക്കൂ",
+      preserveStory: "നിങ്ങളുടെ കഥ സംരക്ഷിക്കൂ",
+      welcomeText:
+        "നിങ്ങളുടെ വിലപ്പെട്ട ഓർമ്മകൾ സുരക്ഷിതമായി സൂക്ഷിക്കുകയും എപ്പോൾ വേണമെങ്കിലും അവയുമായി സംസാരിക്കുകയും ചെയ്യൂ.",
+      createAccount: "അക്കൗണ്ട് സൃഷ്ടിക്കുക",
+      createText:
+        "നിങ്ങളുടെ കഥകൾ, ഫോട്ടോകൾ, ശബ്ദ ഓർമ്മകൾ എന്നിവയ്ക്കായി ഒരു സ്വകാര്യ ഇടം സൃഷ്ടിക്കൂ.",
+
+      login: "ലോഗിൻ →",
+      creating: "സൃഷ്ടിക്കുന്നു...",
+      loggingIn: "ലോഗിൻ ചെയ്യുന്നു...",
+      signup: "അക്കൗണ്ട് ഇല്ലേ? സൈൻ അപ്പ് ചെയ്യൂ",
+      alreadyAccount: "ഇതിനകം അക്കൗണ്ട് ഉണ്ടോ? ലോഗിൻ ചെയ്യൂ",
+
+      aiPowered: "AI മെമ്മറി കീപ്പർ",
+      heroTitle: "നിങ്ങളുടെ ഓർമ്മകൾ. നിങ്ങളുടെ പൈതൃകം.",
+      heroText:
+        "Living Memory AI നിങ്ങളുടെ ഓർമ്മകളും കഥകളും ഫോട്ടോകളും ശബ്ദങ്ങളും സുരക്ഷിതമായി സൂക്ഷിക്കാൻ സഹായിക്കുന്നു.",
+
+      getStarted: "തുടങ്ങാം →",
+      learnMore: "▶ കൂടുതൽ അറിയുക",
+
+      preserveMoments: "പ്രധാനപ്പെട്ട നിമിഷങ്ങൾ സംരക്ഷിക്കൂ",
+      thatMatter: "അവ എന്നും നിങ്ങളുടെ ഓർമ്മയിൽ നിലനിൽക്കട്ടെ.",
+
+      aiMemoryChat: "AI ഓർമ്മ ചാറ്റ്",
+      askPast: "നിങ്ങളുടെ ഭൂതകാലത്തെക്കുറിച്ച് ചോദിക്കൂ.",
+
+      voiceMemoryCard: "വോയ്സ് ഓർമ്മ",
+      recordMoments: "വിലപ്പെട്ട നിമിഷങ്ങൾ റെക്കോർഡ് ചെയ്യൂ.",
+
+      photoMemoryCard: "ഫോട്ടോ ഓർമ്മ",
+      keepVisual: "ഓർമ്മകൾ ചിത്രങ്ങളായി സൂക്ഷിക്കൂ.",
+
+      privateMemories: "സ്വകാര്യ ഓർമ്മകൾ",
+      secureAlways: "സുരക്ഷിതം. സ്വകാര്യം. എപ്പോഴും നിങ്ങളുടേത്.",
+
+      featuresTitle: "നിങ്ങളുടെ ഓർമ്മകൾക്ക് വേണ്ടതെല്ലാം",
+
+      textMemories: "ടെക്സ്റ്റ് ഓർമ്മകൾ",
+      textMemoriesDesc:
+        "നിങ്ങളുടെ ചിന്തകളും കഥകളും പ്രത്യേക നിമിഷങ്ങളും എഴുതൂ.",
+
+      photoMemories: "ഫോട്ടോ ഓർമ്മകൾ",
+      photoMemoriesDesc:
+        "നിങ്ങളുടെ ഓർമ്മകളോടൊപ്പം ഫോട്ടോകൾ സുരക്ഷിതമായി സൂക്ഷിക്കൂ.",
+
+      voiceMemories: "വോയ്സ് ഓർമ്മകൾ",
+      voiceMemoriesDesc:
+        "നിങ്ങളുടെ വിലപ്പെട്ട വാക്കുകളും സംഭാഷണങ്ങളും റെക്കോർഡ് ചെയ്യൂ.",
+
+      aiChat: "AI ചാറ്റ്",
+      aiChatDesc: "AI ഉപയോഗിച്ച് നിങ്ങളുടെ ഓർമ്മകളുമായി സംസാരിക്കൂ.",
+
+      smartSearch: "സ്മാർട്ട് തിരയൽ",
+      smartSearchDesc:
+        "കീവേഡുകൾ ഉപയോഗിച്ച് നിങ്ങളുടെ ഓർമ്മകൾ വേഗത്തിൽ കണ്ടെത്തൂ.",
+
+      secure: "സുരക്ഷിതവും സ്വകാര്യവും",
+      secureDesc:
+        "നിങ്ങളുടെ ഓർമ്മകൾ നിങ്ങളുടെ സ്വകാര്യ അക്കൗണ്ടിൽ സുരക്ഷിതമായിരിക്കും.",
+
+      memoriesSaved: "സംരക്ഷിച്ച ഓർമ്മകൾ",
+      memoryFormats: "ഓർമ്മ ഫോർമാറ്റുകൾ",
+      memoryAssistant: "ഓർമ്മ സഹായി",
+      storyAvailable: "നിങ്ങളുടെ കഥ ലഭ്യമാണ്",
+
+      talkMemories: "നിങ്ങളുടെ ഓർമ്മകളോട് സംസാരിക്കൂ",
+      aiResponses: "AI മറുപടികൾ:",
+      askPlaceholder: "നിങ്ങളുടെ ഓർമ്മകളെക്കുറിച്ച് എന്തെങ്കിലും ചോദിക്കൂ...",
+      askAI: "Living Memory AI-യോട് ചോദിക്കൂ",
+      thinking: "ചിന്തിക്കുന്നു...",
+      askAnything: "നിങ്ങൾ സംരക്ഷിച്ച ഓർമ്മകളെക്കുറിച്ച് എന്തും ചോദിക്കൂ.",
+
+      findMemory: "ഒരു ഓർമ്മ കണ്ടെത്തൂ",
+      searchPlaceholder: "നിങ്ങളുടെ ഓർമ്മകൾ തിരയൂ...",
+      noResults: "പൊരുത്തപ്പെടുന്ന ഓർമ്മകളൊന്നും കണ്ടെത്തിയില്ല.",
+      searchResultsFor: "ഫലങ്ങൾ",
+
+      saveMemory: "പുതിയ ഓർമ്മ സംരക്ഷിക്കൂ",
+      titlePlaceholder: "നിങ്ങളുടെ ഓർമ്മയ്ക്ക് ഒരു തലക്കെട്ട് നൽകൂ...",
+      memoryPlaceholder: "നിങ്ങളുടെ ഓർമ്മ ഇവിടെ എഴുതൂ...",
+      addPhoto: "📸 ഫോട്ടോ ചേർക്കൂ",
+      removePhoto: "❌ ഫോട്ടോ നീക്കം ചെയ്യൂ",
+      save: "ഓർമ്മ സംരക്ഷിക്കൂ 💜",
+      saving: "സംരക്ഷിക്കുന്നു...",
+
+      myMemories: "എന്റെ ഓർമ്മകൾ",
+      refresh: "🔄 പുതുക്കുക",
+      waiting: "നിങ്ങളുടെ ഓർമ്മ ശേഖരം കാത്തിരിക്കുന്നു ✨",
+      firstMemory: "മുകളിൽ നിങ്ങളുടെ ആദ്യത്തെ പ്രത്യേക ഓർമ്മ സംരക്ഷിക്കൂ.",
+
+      edit: "✏️ തിരുത്തുക",
+      delete: "🗑️ ഇല്ലാതാക്കുക",
+      editMemory: "✏️ ഓർമ്മ തിരുത്തുക",
+      saveChanges: "💾 മാറ്റങ്ങൾ സംരക്ഷിക്കുക",
+      cancel: "റദ്ദാക്കുക",
+
+      titleLabel: "തലക്കെട്ട്",
+      memoryTypeLabel: "ഓർമ്മയുടെ തരം",
+      memoryLabel: "ഓർമ്മ",
+      voiceMemoryLabel: "വോയ്സ് ഓർമ്മ",
+
+      aboutTitle: "🌟 Living Memory AI-യെ കുറിച്ച്",
+      aboutText:
+        "നിങ്ങളുടെ കഥകളും ഫോട്ടോകളും ശബ്ദ ഓർമ്മകളും AI ഉപയോഗിച്ച് സംരക്ഷിക്കാനും അനുഭവിക്കാനും കഴിയുന്ന വ്യക്തിഗത ഡിജിറ്റൽ ഇടം.",
+
+      memoryStorage: "മെമ്മറി സ്റ്റോറേജ്",
+      memoryStorageDesc: "പ്രധാനപ്പെട്ട വ്യക്തിഗത ഓർമ്മകൾ സംരക്ഷിക്കൂ.",
+
+      voiceMemory: "വോയ്സ് മെമ്മറി",
+      voiceMemoryDesc:
+        "ടൈപ്പ് ചെയ്യുന്നതിന് പകരം നിങ്ങളുടെ ഓർമ്മകൾ സംസാരിക്കൂ.",
+
+      photoMemory: "ഫോട്ടോ ഓർമ്മകൾ",
+      photoMemoryDesc: "പ്രധാനപ്പെട്ട നിമിഷങ്ങളിലേക്ക് ഫോട്ടോകൾ ചേർക്കൂ.",
+
+      aiConversation: "AI സംഭാഷണം",
+      aiConversationDesc:
+        "നിങ്ങൾ സംരക്ഷിച്ച ഓർമ്മകളെക്കുറിച്ച് ചോദ്യങ്ങൾ ചോദിക്കൂ.",
+
+      memoriesLive: "ഓർമ്മകൾ എന്നും ജീവിക്കും.",
+
+      footerCopy: "© 2026 Living Memory AI — നിങ്ങളുടെ ഓർമ്മകൾ, നിങ്ങളുടെ കഥ.",
+
+      personal: "വ്യക്തിഗതം",
+      college: "കോളേജ്",
+      family: "കുടുംബം",
+      friends: "സുഹൃത്തുക്കൾ",
+      achievement: "നേട്ടം",
+      project: "പ്രോജക്റ്റ്",
+      food: "ഭക്ഷണം",
+      travel: "യാത്ര",
+      other: "മറ്റുള്ളവ",
+
+      email: "ഇമെയിൽ",
+      password: "പാസ്‌വേഡ്",
+      username: "ഉപയോക്തൃനാമം",
+
+      you: "നിങ്ങൾ",
+
+      quickQuestions: [
+        "ഞാൻ ഇപ്പോൾ ഏത് പ്രോജക്റ്റിലാണ് പ്രവർത്തിക്കുന്നത്?",
+        "എന്റെ കോളേജ് യാത്രയെക്കുറിച്ച് പറയൂ.",
+        "ഞാൻ സംരക്ഷിച്ച പ്രധാനപ്പെട്ട കാര്യങ്ങൾ എന്തൊക്കെയാണ്?",
+      ],
+
+      voiceRecorded: "🎤 ശബ്ദം റെക്കോർഡ് ചെയ്തു. ഓർമ്മ സംരക്ഷിക്കൂ.",
+
+      voiceReady: "🎤 വോയ്സ് റെക്കോർഡിംഗ് സംരക്ഷിക്കാൻ തയ്യാറാണ്.",
+    },
+  };
+
+  const ui = translations[language] || translations.English;
+  const visibleMemories =
+    activeProfileFilter === null
+      ? memories
+      : memories.filter(
+          (memory) => Number(memory.profile_id) === Number(activeProfileFilter),
+        );
+  // =====================================================
+  // IMAGE
+  // =====================================================
 
   const handleImageSelect = (event) => {
-    const file = event.target.files[0];
+    const file = event.target.files?.[0];
 
     if (!file) return;
 
@@ -84,6 +950,7 @@ function App() {
     }
 
     setImagePreview(URL.createObjectURL(file));
+
     setMemoryMessage("");
   };
 
@@ -104,6 +971,7 @@ function App() {
 
     try {
       const formData = new FormData();
+
       formData.append("image", selectedImage);
 
       const response = await fetch(`${API}/memories/${memoryId}/image`, {
@@ -129,9 +997,9 @@ function App() {
     }
   };
 
-  /* =====================================================
-     AUDIO
-  ===================================================== */
+  // =====================================================
+  // AUDIO
+  // =====================================================
 
   const uploadMemoryAudio = async (memoryId) => {
     if (!selectedAudio) return true;
@@ -166,9 +1034,9 @@ function App() {
     }
   };
 
-  /* =====================================================
-     SIGNUP
-  ===================================================== */
+  // =====================================================
+  // SIGNUP
+  // =====================================================
 
   const handleSignup = async (event) => {
     event.preventDefault();
@@ -224,9 +1092,9 @@ function App() {
     }
   };
 
-  /* =====================================================
-     LOGIN
-  ===================================================== */
+  // =====================================================
+  // LOGIN
+  // =====================================================
 
   const handleLogin = async (event) => {
     event.preventDefault();
@@ -255,17 +1123,21 @@ function App() {
       const id = Number(data.user_id);
 
       localStorage.setItem("loggedIn", "true");
+
       localStorage.setItem("user_id", String(id));
+
       localStorage.setItem("email", data.email || authEmail);
+
       localStorage.setItem("username", data.username || authUsername);
 
       setUserId(id);
+
       setAuthEmail(data.email || authEmail);
+
       setAuthUsername(data.username || authUsername);
 
       setLoggedIn(true);
       setAuthPassword("");
-
       setAuthMessage("Login successful! 🎉");
     } catch (error) {
       console.error("Login error:", error);
@@ -276,35 +1148,43 @@ function App() {
     }
   };
 
-  /* =====================================================
-     LOGOUT
-  ===================================================== */
+  // =====================================================
+  // LOGOUT
+  // =====================================================
 
   const handleLogout = () => {
     localStorage.removeItem("loggedIn");
+
     localStorage.removeItem("user_id");
+
     localStorage.removeItem("email");
+
     localStorage.removeItem("username");
 
     setLoggedIn(false);
     setUserId(null);
-
     setMemories([]);
     setSearchResults([]);
     setMessages([]);
-
     setAuthPassword("");
     setAuthMessage("");
 
     clearSelectedImage();
     setSelectedAudio(null);
+
+    setProfiles([]);
+    setShowProfileForm(false);
+    setProfileName("");
+    setProfileRelationship("");
+    setProfileDescription("");
+    setProfileMessage("");
   };
 
-  /* =====================================================
-     LOAD MEMORIES
-  ===================================================== */
+  // =====================================================
+  // LOAD MEMORIES
+  // =====================================================
 
-  const loadMemories = async () => {
+  const loadMemories = useCallback(async () => {
     const id = Number(localStorage.getItem("user_id"));
 
     if (!id) {
@@ -327,21 +1207,48 @@ function App() {
 
       setMemories([]);
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (!loggedIn || !userId) return;
 
-    const timer = setTimeout(() => {
-      loadMemories();
-    }, 0);
+    let cancelled = false;
 
-    return () => clearTimeout(timer);
+    const fetchMemories = async () => {
+      try {
+        const id = Number(localStorage.getItem("user_id"));
+
+        if (!id || cancelled) return;
+
+        const response = await fetch(`${API}/memories/?user_id=${id}`);
+
+        if (!response.ok) {
+          throw new Error("Could not load memories.");
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setMemories(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error("Could not load memories:", error);
+
+        if (!cancelled) {
+          setMemories([]);
+        }
+      }
+    };
+
+    fetchMemories();
+
+    return () => {
+      cancelled = true;
+    };
   }, [loggedIn, userId]);
-
-  /* =====================================================
-     SAVE MEMORY
-  ===================================================== */
+  // =====================================================
+  // SAVE MEMORY
+  // =====================================================
 
   const handleSaveMemory = async (event) => {
     event.preventDefault();
@@ -376,6 +1283,7 @@ function App() {
           content: content.trim(),
           memory_type: memoryType,
           user_id: userId,
+          profile_id: selectedProfileId ? Number(selectedProfileId) : null,
         }),
       });
 
@@ -429,9 +1337,9 @@ function App() {
     }
   };
 
-  /* =====================================================
-     SEARCH
-  ===================================================== */
+  // =====================================================
+  // SEARCH
+  // =====================================================
 
   const searchMemories = useCallback(async () => {
     if (!userId) {
@@ -473,14 +1381,17 @@ function App() {
     return () => clearTimeout(timer);
   }, [searchMemories]);
 
-  /* =====================================================
-     EDIT MEMORY
-  ===================================================== */
+  // =====================================================
+  // EDIT MEMORY
+  // =====================================================
 
   const startEditingMemory = (memory) => {
     setEditingMemoryId(memory.id);
+
     setEditTitle(memory.title || "");
+
     setEditContent(memory.content || "");
+
     setEditMemoryType(memory.memory_type || "personal");
 
     setMemoryMessage("");
@@ -545,12 +1456,7 @@ function App() {
       setMemoryMessage("Memory updated successfully! ✨");
 
       cancelEditingMemory();
-
       await loadMemories();
-
-      if (search.trim()) {
-        await searchMemories();
-      }
     } catch (error) {
       console.error("Update memory error:", error);
 
@@ -560,9 +1466,9 @@ function App() {
     }
   };
 
-  /* =====================================================
-     DELETE
-  ===================================================== */
+  // =====================================================
+  // DELETE MEMORY
+  // =====================================================
 
   const handleDeleteMemory = async (memoryId) => {
     const confirmDelete = window.confirm(
@@ -572,33 +1478,30 @@ function App() {
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch(`${API}/memories/${memoryId}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `${API}/memories/${memoryId}?user_id=${userId}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      const data = await response.json();
 
       if (!response.ok) {
-        throw new Error("Could not delete memory.");
-      }
-
-      if (Number(editingMemoryId) === Number(memoryId)) {
-        cancelEditingMemory();
+        throw new Error(data.detail || "Could not delete memory.");
       }
 
       await loadMemories();
-
-      if (search.trim()) {
-        await searchMemories();
-      }
     } catch (error) {
-      console.error("Delete error:", error);
+      console.error("Delete memory error:", error);
 
-      alert("Could not delete memory.");
+      setMemoryMessage(error.message || "Could not delete memory.");
     }
   };
 
-  /* =====================================================
-     AI CHAT
-  ===================================================== */
+  // =====================================================
+  // AI
+  // =====================================================
 
   const askAI = async (text = question) => {
     const prompt = text.trim();
@@ -625,6 +1528,10 @@ function App() {
         body: JSON.stringify({
           user_id: userId,
           question: prompt,
+
+          // Selected language is
+          // sent to the backend.
+          language: language,
         }),
       });
 
@@ -663,15 +1570,220 @@ function App() {
     }
   };
 
-  const quickQuestions = [
-    "What project am I currently working on?",
-    "Tell me about my college journey.",
-    "What are some important things I have saved?",
+  // =====================================================
+  // LANGUAGE CHANGE
+  // =====================================================
+
+  const handleLanguageChange = (event) => {
+    const selectedLanguage = event.target.value;
+
+    setLanguage(selectedLanguage);
+
+    localStorage.setItem("language", selectedLanguage);
+  };
+
+  // =====================================================
+  // LOAD PROFILES
+  // =====================================================
+
+  useEffect(() => {
+    if (!loggedIn || !userId) return;
+
+    let cancelled = false;
+
+    const fetchProfiles = async () => {
+      try {
+        const id = Number(localStorage.getItem("user_id"));
+
+        if (!id || cancelled) return;
+
+        const response = await fetch(`${API}/profiles/?user_id=${id}`);
+
+        if (!response.ok) {
+          throw new Error("Could not load profiles.");
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setProfiles(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error("Could not load profiles:", error);
+
+        if (!cancelled) {
+          setProfiles([]);
+        }
+      }
+    };
+
+    fetchProfiles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loggedIn, userId]);
+
+  // =====================================================
+  // CREATE PROFILE
+  // =====================================================
+
+  const createProfile = async (event) => {
+    event.preventDefault();
+
+    setProfileMessage("");
+
+    if (!profileName.trim()) {
+      setProfileMessage("Please enter a profile name.");
+      return;
+    }
+
+    if (!profileRelationship.trim()) {
+      setProfileMessage("Please enter the relationship.");
+      return;
+    }
+
+    if (!userId) {
+      setProfileMessage("Please login first.");
+      return;
+    }
+
+    setProfileLoading(true);
+
+    try {
+      const response = await fetch(`${API}/profiles/?user_id=${userId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          name: profileName.trim(),
+          relationship_type: profileRelationship.trim(),
+          description: profileDescription.trim() || null,
+          photo_url: null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        const errorDetails =
+          typeof data.detail === "string"
+            ? data.detail
+            : JSON.stringify(data.detail, null, 2);
+
+        throw new Error(
+          errorDetails ||
+            `Could not create profile. Status: ${response.status}`,
+        );
+      }
+
+      setProfiles((previous) => [...previous, data]);
+      setProfileName("");
+      setProfileRelationship("");
+      setProfileDescription("");
+      setShowProfileForm(false);
+      setProfileMessage("Profile created successfully! 🎉");
+    } catch (error) {
+      console.error("Profile creation error:", error);
+      setProfileMessage(error.message || "Could not create profile.");
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+  // =====================================================
+  // GENERATE LIVING IDENTITY SUMMARY
+  // =====================================================
+
+  const generateIdentitySummary = async (profile) => {
+    if (!userId) {
+      setIdentityErrors((previous) => ({
+        ...previous,
+        [profile.id]: "Please log in first.",
+      }));
+      return;
+    }
+
+    setIdentityLoadingId(profile.id);
+
+    setIdentityErrors((previous) => ({
+      ...previous,
+      [profile.id]: "",
+    }));
+
+    try {
+      const response = await fetch(
+        `${API}/profiles/${profile.id}/identity-summary?user_id=${userId}`,
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Could not generate identity summary.");
+      }
+
+      setIdentitySummaries((previous) => ({
+        ...previous,
+        [profile.id]: data.summary,
+      }));
+    } catch (error) {
+      console.error("Identity summary error:", error);
+
+      setIdentityErrors((previous) => ({
+        ...previous,
+        [profile.id]: error.message || "Something went wrong.",
+      }));
+    } finally {
+      setIdentityLoadingId(null);
+    }
+  };
+  // =====================================================
+  // MEMORY TYPES
+  // =====================================================
+
+  const memoryTypes = [
+    {
+      value: "personal",
+      label: ui.personal,
+    },
+    {
+      value: "college",
+      label: ui.college,
+    },
+    {
+      value: "family",
+      label: ui.family,
+    },
+    {
+      value: "friends",
+      label: ui.friends,
+    },
+    {
+      value: "achievement",
+      label: ui.achievement,
+    },
+    {
+      value: "project",
+      label: ui.project,
+    },
+    {
+      value: "food",
+      label: ui.food,
+    },
+    {
+      value: "travel",
+      label: ui.travel,
+    },
+    {
+      value: "other",
+      label: ui.other,
+    },
   ];
 
-  /* =====================================================
-     LOGIN / SIGNUP PAGE
-  ===================================================== */
+  // =====================================================
+  // LOGIN / SIGNUP PAGE
+  // =====================================================
 
   if (!loggedIn) {
     return (
@@ -682,7 +1794,8 @@ function App() {
 
             <div>
               <h1>Living Memory AI</h1>
-              <p>Memories live forever.</p>
+
+              <p>{ui.memoriesLive}</p>
             </div>
           </div>
         </header>
@@ -691,18 +1804,16 @@ function App() {
           <section className="auth-card">
             {!showSignup ? (
               <>
-                <span className="hero-badge">✨ Welcome back</span>
+                <span className="hero-badge">✨ {ui.welcome}</span>
 
-                <h2>Preserve Your Story</h2>
+                <h2>{ui.preserveStory}</h2>
 
-                <p className="auth-subtitle">
-                  Keep your precious memories safe and talk to them anytime.
-                </p>
+                <p className="auth-subtitle">{ui.welcomeText}</p>
 
                 <form onSubmit={handleLogin}>
                   <input
                     type="email"
-                    placeholder="Email"
+                    placeholder={ui.email}
                     value={authEmail}
                     onChange={(event) => setAuthEmail(event.target.value)}
                     required
@@ -710,14 +1821,14 @@ function App() {
 
                   <input
                     type="password"
-                    placeholder="Password"
+                    placeholder={ui.password}
                     value={authPassword}
                     onChange={(event) => setAuthPassword(event.target.value)}
                     required
                   />
 
                   <button type="submit" disabled={authLoading}>
-                    {authLoading ? "Logging in..." : "Login →"}
+                    {authLoading ? ui.loggingIn : ui.login}
                   </button>
                 </form>
 
@@ -731,24 +1842,21 @@ function App() {
                     setAuthMessage("");
                   }}
                 >
-                  Don't have an account? Sign up
+                  {ui.signup}
                 </button>
               </>
             ) : (
               <>
-                <span className="hero-badge">✨ Start your memory journey</span>
+                <span className="hero-badge">✨ {ui.startJourney}</span>
 
-                <h2>Create Your Account</h2>
+                <h2>{ui.createAccount}</h2>
 
-                <p className="auth-subtitle">
-                  Create a private space for your stories, photos and voice
-                  memories.
-                </p>
+                <p className="auth-subtitle">{ui.createText}</p>
 
                 <form onSubmit={handleSignup}>
                   <input
                     type="text"
-                    placeholder="Username"
+                    placeholder={ui.username}
                     value={authUsername}
                     onChange={(event) => setAuthUsername(event.target.value)}
                     required
@@ -756,7 +1864,7 @@ function App() {
 
                   <input
                     type="email"
-                    placeholder="Email"
+                    placeholder={ui.email}
                     value={authEmail}
                     onChange={(event) => setAuthEmail(event.target.value)}
                     required
@@ -764,14 +1872,14 @@ function App() {
 
                   <input
                     type="password"
-                    placeholder="Password"
+                    placeholder={ui.password}
                     value={authPassword}
                     onChange={(event) => setAuthPassword(event.target.value)}
                     required
                   />
 
                   <button type="submit" disabled={authLoading}>
-                    {authLoading ? "Creating..." : "Create Account →"}
+                    {authLoading ? ui.creating : ui.createAccount}
                   </button>
                 </form>
 
@@ -785,7 +1893,7 @@ function App() {
                     setAuthMessage("");
                   }}
                 >
-                  Already have an account? Login
+                  {ui.alreadyAccount}
                 </button>
               </>
             )}
@@ -795,9 +1903,9 @@ function App() {
     );
   }
 
-  /* =====================================================
-     MAIN WEBSITE
-  ===================================================== */
+  // =====================================================
+  // MAIN WEBSITE
+  // =====================================================
 
   return (
     <div className="app">
@@ -809,19 +1917,43 @@ function App() {
 
           <div>
             <h1>Living Memory AI</h1>
-            <p>Memories live forever.</p>
+
+            <p>{ui.memoriesLive}</p>
           </div>
         </div>
 
         <nav className="nav-links">
-          <a href="#home">Home</a>
-          <a href="#features">Features</a>
-          <a href="#memories">Memories</a>
-          <a href="#about">About</a>
+          <a href="#home">{ui.home}</a>
+
+          <a href="#features">{ui.features}</a>
+
+          <a href="#memories">{ui.memories}</a>
+
+          <a href="#profiles">👥 Profiles</a>
+
+          <a href="#about">{ui.about}</a>
         </nav>
 
+        {/* LANGUAGE SELECTOR */}
+
+        <div className="language-selector">
+          <span className="language-icon">🌐</span>
+
+          <select
+            value={language}
+            onChange={handleLanguageChange}
+            aria-label="Select language"
+          >
+            {languages.map((item) => (
+              <option key={item.code} value={item.name}>
+                {item.native}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <button type="button" className="logout-button" onClick={handleLogout}>
-          Logout
+          {ui.logout}
         </button>
       </header>
 
@@ -829,32 +1961,23 @@ function App() {
         {/* =================================================
             FUTURISTIC HERO
         ================================================= */}
-
         <section className="hero-section">
           {/* LEFT */}
 
           <div className="hero-left">
-            <div className="hero-badge">✨ AI Powered Memory Keeper</div>
+            <div className="hero-badge">✨ {ui.aiPowered}</div>
 
-            <h1>
-              Your Memories.
-              <br />
-              Your Legacy.
-            </h1>
+            <h1>{ui.heroTitle}</h1>
 
-            <p className="hero-description">
-              Living Memory AI helps you preserve your precious memories,
-              stories, photos and voices in one secure place and lets you relive
-              them anytime.
-            </p>
+            <p className="hero-description">{ui.heroText}</p>
 
             <div className="hero-buttons">
               <a className="primary-btn hero-link" href="#save-memory">
-                Get Started →
+                {ui.getStarted}
               </a>
 
               <a className="secondary-btn hero-link" href="#features">
-                ▶ Learn More
+                {ui.learnMore}
               </a>
             </div>
 
@@ -867,9 +1990,9 @@ function App() {
               </div>
 
               <p>
-                Preserve the moments
+                {ui.preserveMoments}
                 <br />
-                that matter most.
+                {ui.thatMatter}
               </p>
             </div>
           </div>
@@ -890,9 +2013,9 @@ function App() {
                 <span className="card-icon">🤖</span>
 
                 <div>
-                  <strong>AI Memory Chat</strong>
+                  <strong>{ui.aiMemoryChat}</strong>
 
-                  <small>Ask about your past.</small>
+                  <small>{ui.askPast}</small>
                 </div>
               </div>
 
@@ -902,9 +2025,9 @@ function App() {
                 <span className="card-icon">🎙️</span>
 
                 <div>
-                  <strong>Voice Memory</strong>
+                  <strong>{ui.voiceMemoryCard}</strong>
 
-                  <small>Record precious moments.</small>
+                  <small>{ui.recordMoments}</small>
                 </div>
               </div>
 
@@ -914,9 +2037,9 @@ function App() {
                 <span className="card-icon">🖼️</span>
 
                 <div>
-                  <strong>Photo Memory</strong>
+                  <strong>{ui.photoMemoryCard}</strong>
 
-                  <small>Keep memories visual.</small>
+                  <small>{ui.keepVisual}</small>
                 </div>
               </div>
 
@@ -926,97 +2049,120 @@ function App() {
                 <span className="card-icon">🔐</span>
 
                 <div>
-                  <strong>Private Memories</strong>
+                  <strong>{ui.privateMemories}</strong>
 
-                  <small>Secure. Private. Always yours.</small>
+                  <small>{ui.secureAlways}</small>
                 </div>
               </div>
             </div>
           </div>
         </section>
-
         {/* =================================================
             FEATURES
         ================================================= */}
-
         <section id="features">
-          <h2>Everything Your Memories Need</h2>
+          <h2>{ui.featuresTitle}</h2>
 
           <div className="feature-grid">
             <div className="feature-card">
               <div className="feature-icon">✍️</div>
-              <h3>Text Memories</h3>
-              <p>Write down your thoughts, stories and special moments.</p>
+
+              <h3>{ui.textMemories}</h3>
+
+              <p>{ui.textMemoriesDesc}</p>
             </div>
 
             <div className="feature-card">
               <div className="feature-icon">📸</div>
-              <h3>Photo Memories</h3>
-              <p>Upload and store photos safely with your memories.</p>
+
+              <h3>{ui.photoMemories}</h3>
+
+              <p>{ui.photoMemoriesDesc}</p>
             </div>
 
             <div className="feature-card">
               <div className="feature-icon">🎤</div>
-              <h3>Voice Memories</h3>
-              <p>Record your precious words and conversations.</p>
+
+              <h3>{ui.voiceMemories}</h3>
+
+              <p>{ui.voiceMemoriesDesc}</p>
             </div>
 
             <div className="feature-card">
               <div className="feature-icon">🤖</div>
-              <h3>AI Chat</h3>
-              <p>Talk with your memories using AI and revisit the past.</p>
+
+              <h3>{ui.aiChat}</h3>
+
+              <p>{ui.aiChatDesc}</p>
             </div>
 
             <div className="feature-card">
               <div className="feature-icon">🔎</div>
-              <h3>Smart Search</h3>
-              <p>Find your memories quickly using keywords.</p>
+
+              <h3>{ui.smartSearch}</h3>
+
+              <p>{ui.smartSearchDesc}</p>
             </div>
 
             <div className="feature-card">
               <div className="feature-icon">🔐</div>
-              <h3>Secure & Private</h3>
-              <p>Your memories stay connected to your personal account.</p>
+
+              <h3>{ui.secure}</h3>
+
+              <p>{ui.secureDesc}</p>
             </div>
           </div>
         </section>
-
         {/* =================================================
             STATS
         ================================================= */}
-
         <section className="stats-section">
           <div className="stat">
             <h3>{memories.length}+</h3>
-            <p>Memories Saved</p>
+
+            <p>{ui.memoriesSaved}</p>
           </div>
 
           <div className="stat">
             <h3>3</h3>
-            <p>Memory Formats</p>
+
+            <p>{ui.memoryFormats}</p>
           </div>
 
           <div className="stat">
             <h3>AI</h3>
-            <p>Memory Assistant</p>
+
+            <p>{ui.memoryAssistant}</p>
           </div>
 
           <div className="stat">
             <h3>24/7</h3>
-            <p>Your Story Available</p>
+
+            <p>{ui.storyAvailable}</p>
           </div>
         </section>
-
         {/* =================================================
             AI CHAT
         ================================================= */}
-
         <section className="chat-section">
-          <h2>🤖 Talk to Your Memories</h2>
+          <h2>🤖 {ui.talkMemories}</h2>
+
+          <p
+            style={{
+              margin: "0 0 14px",
+              fontSize: "14px",
+              fontWeight: 600,
+              opacity: 0.75,
+            }}
+          >
+            🌐 {ui.aiResponses}{" "}
+            {languages.find((item) => item.name === language)?.native ||
+              language}
+          </p>
 
           <textarea
             className="chat-input"
-            placeholder="Ask something about your memories..."
+            placeholder={ui.askPlaceholder}
             value={question}
             onChange={(event) => setQuestion(event.target.value)}
             onKeyDown={(event) => {
@@ -1033,11 +2179,11 @@ function App() {
             onClick={() => askAI()}
             disabled={loadingAI}
           >
-            {loadingAI ? "Thinking..." : "Ask Living Memory AI"}
+            {loadingAI ? ui.thinking : ui.askAI}
           </button>
 
           <div className="quick-questions">
-            {quickQuestions.map((item) => (
+            {ui.quickQuestions.map((item) => (
               <button
                 type="button"
                 key={item}
@@ -1054,7 +2200,7 @@ function App() {
               <div className="empty-chat">
                 <h3>🤖 Living Memory AI</h3>
 
-                <p>Ask me anything about your saved memories.</p>
+                <p>{ui.askAnything}</p>
               </div>
             ) : (
               messages.map((message, index) => (
@@ -1067,7 +2213,9 @@ function App() {
                   }
                 >
                   <strong>
-                    {message.role === "user" ? "👤 You" : "🤖 Living Memory AI"}
+                    {message.role === "user"
+                      ? `👤 ${ui.you}`
+                      : "🤖 Living Memory AI"}
                   </strong>
 
                   <p>{message.content}</p>
@@ -1076,18 +2224,16 @@ function App() {
             )}
           </div>
         </section>
-
         {/* =================================================
             SEARCH
         ================================================= */}
-
         <section className="search-section">
-          <h2>🔎 Find a Memory</h2>
+          <h2>🔎 {ui.findMemory}</h2>
 
           <div className="memory-search">
             <input
               type="text"
-              placeholder="Search your memories..."
+              placeholder={ui.searchPlaceholder}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -1095,10 +2241,12 @@ function App() {
 
           {search.trim() && (
             <div className="search-results">
-              <h3>Results for "{search}"</h3>
+              <h3>
+                {ui.searchResultsFor} "{search}"
+              </h3>
 
               {searchResults.length === 0 ? (
-                <p className="empty">No matching memories found.</p>
+                <p className="empty">{ui.noResults}</p>
               ) : (
                 <div className="memory-grid">
                   {searchResults.map((memory) => (
@@ -1125,7 +2273,7 @@ function App() {
                           className="edit-button"
                           onClick={() => startEditingMemory(memory)}
                         >
-                          ✏️ Edit
+                          {ui.edit}
                         </button>
 
                         <button
@@ -1133,7 +2281,7 @@ function App() {
                           className="delete-button"
                           onClick={() => handleDeleteMemory(memory.id)}
                         >
-                          🗑️ Delete
+                          {ui.delete}
                         </button>
                       </div>
                     </article>
@@ -1143,26 +2291,24 @@ function App() {
             </div>
           )}
         </section>
-
         {/* =================================================
             EDIT MEMORY
         ================================================= */}
-
         {editingMemoryId && (
           <section className="card">
-            <h2>✏️ Edit Memory</h2>
+            <h2>{ui.editMemory}</h2>
 
             <form onSubmit={handleUpdateMemory}>
               <input
                 type="text"
-                placeholder="Memory title"
+                placeholder={ui.titlePlaceholder}
                 value={editTitle}
                 onChange={(event) => setEditTitle(event.target.value)}
                 required
               />
 
               <textarea
-                placeholder="Edit your memory..."
+                placeholder={ui.memoryPlaceholder}
                 value={editContent}
                 onChange={(event) => setEditContent(event.target.value)}
                 required
@@ -1172,15 +2318,11 @@ function App() {
                 value={editMemoryType}
                 onChange={(event) => setEditMemoryType(event.target.value)}
               >
-                <option value="personal">Personal</option>
-                <option value="college">College</option>
-                <option value="family">Family</option>
-                <option value="friends">Friends</option>
-                <option value="achievement">Achievement</option>
-                <option value="project">Project</option>
-                <option value="food">Food</option>
-                <option value="travel">Travel</option>
-                <option value="other">Other</option>
+                {memoryTypes.map((type) => (
+                  <option key={type.value} value={type.value}>
+                    {type.label}
+                  </option>
+                ))}
               </select>
 
               <div className="memory-actions">
@@ -1189,7 +2331,7 @@ function App() {
                   className="primary-button"
                   disabled={editLoading}
                 >
-                  {editLoading ? "Saving..." : "💾 Save Changes"}
+                  {editLoading ? ui.saving : ui.saveChanges}
                 </button>
 
                 <button
@@ -1197,7 +2339,7 @@ function App() {
                   className="secondary-button"
                   onClick={cancelEditingMemory}
                 >
-                  Cancel
+                  {ui.cancel}
                 </button>
               </div>
             </form>
@@ -1205,25 +2347,23 @@ function App() {
             {memoryMessage && <p className="message">{memoryMessage}</p>}
           </section>
         )}
-
         {/* =================================================
             SAVE MEMORY
         ================================================= */}
-
         <section id="save-memory">
-          <h2>✨ Save a New Memory</h2>
+          <h2>✨ {ui.saveMemory}</h2>
 
           <form onSubmit={handleSaveMemory}>
             <input
               type="text"
-              placeholder="Give your memory a title..."
+              placeholder={ui.titlePlaceholder}
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               required
             />
 
             <textarea
-              placeholder="Write your memory here..."
+              placeholder={ui.memoryPlaceholder}
               value={content}
               onChange={(event) => setContent(event.target.value)}
               required
@@ -1238,17 +2378,15 @@ function App() {
               onAudioRecorded={(audioBlob) => {
                 setSelectedAudio(audioBlob);
 
-                setMemoryMessage("🎤 Voice recorded. Save the memory.");
+                setMemoryMessage(ui.voiceRecorded);
               }}
             />
 
-            {selectedAudio && (
-              <p className="message">🎤 Voice recording ready to save.</p>
-            )}
+            {selectedAudio && <p className="message">{ui.voiceReady}</p>}
 
             <div className="photo-upload">
               <label htmlFor="memory-image" className="photo-upload-label">
-                📸 Add a Photo
+                {ui.addPhoto}
               </label>
 
               <input
@@ -1267,25 +2405,35 @@ function App() {
                     className="secondary-button"
                     onClick={clearSelectedImage}
                   >
-                    ❌ Remove Photo
+                    {ui.removePhoto}
                   </button>
                 </div>
               )}
             </div>
+            <label htmlFor="memory-profile">Whose memory is this?</label>
 
+            <select
+              id="memory-profile"
+              value={selectedProfileId}
+              onChange={(event) => setSelectedProfileId(event.target.value)}
+            >
+              <option value="">General memory — no profile</option>
+
+              {profiles.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.name} ({profile.relationship_type})
+                </option>
+              ))}
+            </select>
             <select
               value={memoryType}
               onChange={(event) => setMemoryType(event.target.value)}
             >
-              <option value="personal">Personal</option>
-              <option value="college">College</option>
-              <option value="family">Family</option>
-              <option value="friends">Friends</option>
-              <option value="achievement">Achievement</option>
-              <option value="project">Project</option>
-              <option value="food">Food</option>
-              <option value="travel">Travel</option>
-              <option value="other">Other</option>
+              {memoryTypes.map((type) => (
+                <option key={type.value} value={type.value}>
+                  {type.label}
+                </option>
+              ))}
             </select>
 
             <button
@@ -1293,41 +2441,43 @@ function App() {
               className="primary-button"
               disabled={saving || uploadingImage || uploadingAudio}
             >
-              {saving || uploadingImage || uploadingAudio
-                ? "Saving..."
-                : "Save Memory 💜"}
+              {saving || uploadingImage || uploadingAudio ? ui.saving : ui.save}
             </button>
           </form>
 
           {memoryMessage && <p className="message">{memoryMessage}</p>}
         </section>
-
         {/* =================================================
             MY MEMORIES
         ================================================= */}
-
         <section id="memories">
           <div className="section-heading">
-            <h2>💜 My Memories</h2>
+            <h2>💜 {ui.myMemories}</h2>
 
             <button
               type="button"
               className="refresh-button"
               onClick={loadMemories}
             >
-              🔄 Refresh
+              {ui.refresh}
             </button>
           </div>
-
-          {memories.length === 0 ? (
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => setActiveProfileFilter(null)}
+          >
+            Show All Memories
+          </button>
+          {visibleMemories.length === 0 ? (
             <div className="empty">
-              <h3>Your memory collection is waiting ✨</h3>
+              <h3>{ui.waiting}</h3>
 
-              <p>Save your first special moment above.</p>
+              <p>{ui.firstMemory}</p>
             </div>
           ) : (
             <div className="memory-grid">
-              {memories.map((memory) => (
+              {visibleMemories.map((memory) => (
                 <article className="memory-card" key={memory.id}>
                   {memory.image_url && (
                     <img
@@ -1348,7 +2498,15 @@ function App() {
                   <span className="memory-type">
                     {memory.memory_type || "personal"}
                   </span>
-
+                  {memory.profile_id && (
+                    <span className="memory-type">
+                      👤{" "}
+                      {profiles.find(
+                        (profile) =>
+                          Number(profile.id) === Number(memory.profile_id),
+                      )?.name || "Linked profile"}
+                    </span>
+                  )}
                   <h3>{memory.title}</h3>
 
                   <p>{memory.content}</p>
@@ -1369,7 +2527,7 @@ function App() {
                       className="edit-button"
                       onClick={() => startEditingMemory(memory)}
                     >
-                      ✏️ Edit
+                      {ui.edit}
                     </button>
 
                     <button
@@ -1377,7 +2535,7 @@ function App() {
                       className="delete-button"
                       onClick={() => handleDeleteMemory(memory.id)}
                     >
-                      🗑️ Delete
+                      {ui.delete}
                     </button>
                   </div>
                 </article>
@@ -1385,50 +2543,239 @@ function App() {
             </div>
           )}
         </section>
+        {/* =================================================
+            PROFILES
+        ================================================= */}
+        {/* =================================================
+            PROFILES
+        ================================================= */}
 
+        <section id="profiles" className="profiles-section">
+          <div className="section-heading">
+            <span className="section-label">👥 RELATIONSHIP PROFILES</span>
+
+            <h2>People Behind Your Memories</h2>
+
+            <p>Organize memories around the people who matter most.</p>
+          </div>
+
+          <div className="profiles-grid">
+            <article className="profile-card">
+              <div className="profile-avatar">👩</div>
+
+              <h3>Mom</h3>
+
+              <span className="profile-relation">Mother</span>
+
+              <p>Family memories, stories, advice and special moments.</p>
+
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => {
+                  setActiveProfileFilter(null);
+                  setSearch("Mom");
+
+                  document.getElementById("memories")?.scrollIntoView({
+                    behavior: "smooth",
+                  });
+                }}
+              >
+                View Memories →
+              </button>
+            </article>
+
+            <article className="profile-card">
+              <div className="profile-avatar">👨</div>
+
+              <h3>Dad</h3>
+
+              <span className="profile-relation">Father</span>
+
+              <p>Important experiences, conversations and family memories.</p>
+
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => {
+                  setSearch("Dad");
+
+                  document.getElementById("memories")?.scrollIntoView({
+                    behavior: "smooth",
+                  });
+                }}
+              >
+                View Memories →
+              </button>
+            </article>
+
+            {profiles.map((profile) => (
+              <article className="profile-card" key={profile.id}>
+                <div className="profile-avatar">👤</div>
+
+                <h3>{profile.name}</h3>
+
+                <span className="profile-relation">
+                  {profile.relationship_type}
+                </span>
+
+                <p>
+                  {profile.description ||
+                    "Personal memories and important moments."}
+                </p>
+
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => generateIdentitySummary(profile)}
+                  disabled={identityLoadingId === profile.id}
+                >
+                  {identityLoadingId === profile.id
+                    ? "Generating summary..."
+                    : "🧠 Generate AI Summary"}
+                </button>
+
+                {identityErrors[profile.id] && (
+                  <p className="message">{identityErrors[profile.id]}</p>
+                )}
+
+                {identitySummaries[profile.id] && (
+                  <div className="identity-summary">
+                    <h4>✨ Living Identity</h4>
+                    <p>{identitySummaries[profile.id]}</p>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => {
+                    setActiveProfileFilter(profile.id);
+                    setSearch("");
+
+                    document.getElementById("memories")?.scrollIntoView({
+                      behavior: "smooth",
+                    });
+                  }}
+                >
+                  View Memories →
+                </button>
+              </article>
+            ))}
+
+            <article className="profile-card add-profile-card">
+              <div className="profile-avatar">＋</div>
+
+              <h3>Add Profile</h3>
+
+              <p>Create a profile for someone important in your life.</p>
+
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() => {
+                  setShowProfileForm(true);
+                  setProfileMessage("");
+                }}
+              >
+                + Create Profile
+              </button>
+            </article>
+          </div>
+
+          {showProfileForm && (
+            <form className="card" onSubmit={createProfile}>
+              <h3>Create Relationship Profile</h3>
+
+              <input
+                type="text"
+                placeholder="Name"
+                value={profileName}
+                onChange={(event) => setProfileName(event.target.value)}
+                required
+              />
+
+              <input
+                type="text"
+                placeholder="Relationship"
+                value={profileRelationship}
+                onChange={(event) => setProfileRelationship(event.target.value)}
+                required
+              />
+
+              <textarea
+                placeholder="Description"
+                value={profileDescription}
+                onChange={(event) => setProfileDescription(event.target.value)}
+              />
+
+              <div className="memory-actions">
+                <button
+                  type="submit"
+                  className="primary-button"
+                  disabled={profileLoading}
+                >
+                  {profileLoading ? "Creating..." : "Create Profile"}
+                </button>
+
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => {
+                    setShowProfileForm(false);
+                    setProfileMessage("");
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+
+              {profileMessage && <p className="message">{profileMessage}</p>}
+            </form>
+          )}
+        </section>
+        {/* =================================================
+    ABOUT
+================================================= */}
         {/* =================================================
             ABOUT
         ================================================= */}
-
         <section id="about" className="about-card">
-          <h2>🌟 About Living Memory AI</h2>
+          <h2>{ui.aboutTitle}</h2>
 
-          <p>
-            A personal digital space where your stories, photos and voice
-            memories can be preserved and explored through AI.
-          </p>
+          <p>{ui.aboutText}</p>
 
           <div className="feature-grid">
             <div className="feature-card">
               <div className="feature-icon">🧠</div>
 
-              <h3>Memory Storage</h3>
+              <h3>{ui.memoryStorage}</h3>
 
-              <p>Save important personal memories.</p>
+              <p>{ui.memoryStorageDesc}</p>
             </div>
 
             <div className="feature-card">
               <div className="feature-icon">🎤</div>
 
-              <h3>Voice Memory</h3>
+              <h3>{ui.voiceMemory}</h3>
 
-              <p>Speak your memories instead of typing.</p>
+              <p>{ui.voiceMemoryDesc}</p>
             </div>
 
             <div className="feature-card">
               <div className="feature-icon">📸</div>
 
-              <h3>Photo Memories</h3>
+              <h3>{ui.photoMemory}</h3>
 
-              <p>Attach photos to meaningful moments.</p>
+              <p>{ui.photoMemoryDesc}</p>
             </div>
 
             <div className="feature-card">
               <div className="feature-icon">🤖</div>
 
-              <h3>AI Conversation</h3>
+              <h3>{ui.aiConversation}</h3>
 
-              <p>Ask questions about your saved memories.</p>
+              <p>{ui.aiConversationDesc}</p>
             </div>
           </div>
         </section>
@@ -1441,9 +2788,9 @@ function App() {
       <footer>
         <h2>🧠 Living Memory AI</h2>
 
-        <p>Memories live forever.</p>
+        <p>{ui.memoriesLive}</p>
 
-        <p>© 2026 Living Memory AI — Your memories, your story.</p>
+        <p>{ui.footerCopy}</p>
       </footer>
     </div>
   );

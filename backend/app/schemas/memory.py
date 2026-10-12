@@ -12,6 +12,7 @@ class MemoryCreate(BaseModel):
     content: str
     memory_type: str = "personal"
     user_id: int = 1
+    profile_id: int | None = None
 
 
 # =========================================================
@@ -24,6 +25,7 @@ class MemoryResponse(BaseModel):
     content: str
     memory_type: str
     user_id: int
+    profile_id: int | None = None
     created_at: datetime | None = None
 
     # Photo attached to the memory
