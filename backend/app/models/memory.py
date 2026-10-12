@@ -40,7 +40,12 @@ class Memory(Base):
         nullable=False,
         default=1
     )
-
+    # Link this memory to a person's profile
+    profile_id = Column(
+    Integer,
+    nullable=True,
+    index=True
+    )
     created_at = Column(
         DateTime,
         default=datetime.utcnow
@@ -54,3 +59,7 @@ class Memory(Base):
         String(500),
         nullable=True
     )
+    audio_url = Column(
+    String(500),
+    nullable=True
+)

@@ -1,25 +1,22 @@
 import { useRef, useState } from "react";
 
+const API = "http://127.0.0.1:8001";
+
 function VoiceRecorder({ onTextGenerated, onAudioRecorded }) {
   const [recording, setRecording] = useState(false);
   const [status, setStatus] = useState("");
 
-  const recognitionRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
 
   const startRecording = async () => {
+    let stream;
+
     try {
-      // =========================================
-      // GET MICROPHONE
-      // =========================================
-      const stream = await navigator.mediaDevices.getUserMedia({
+      stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
 
-      // =========================================
-      // AUDIO RECORDER
-      // =========================================
       const mediaRecorder = new MediaRecorder(stream);
 
       mediaRecorderRef.current = mediaRecorder;
@@ -31,83 +28,86 @@ function VoiceRecorder({ onTextGenerated, onAudioRecorded }) {
         }
       };
 
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, {
-          type: "audio/webm",
+          type: mediaRecorder.mimeType || "audio/webm",
         });
 
-        // Send audio to App.jsx
+        stream.getTracks().forEach((track) => track.stop());
+
         if (onAudioRecorded) {
           onAudioRecorded(audioBlob);
         }
 
-        // Stop microphone
-        stream.getTracks().forEach((track) => track.stop());
+        if (!audioBlob.size) {
+          setStatus("❌ No audio was recorded. Please try again.");
+          return;
+        }
 
-        setStatus("✅ Voice recorded. Save the memory.");
+        setStatus("⏳ Transcribing your recording...");
+
+        try {
+          const formData = new FormData();
+
+          formData.append("audio", audioBlob, "recording.webm");
+
+          const response = await fetch(`${API}/memories/transcribe`, {
+            method: "POST",
+            body: formData,
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.detail || "Transcription request failed.");
+          }
+
+          const transcript = result.text?.trim();
+
+          if (transcript) {
+            if (onTextGenerated) {
+              onTextGenerated(transcript);
+            }
+
+            setStatus(`✅ Transcript added: ${transcript}`);
+          } else {
+            setStatus(
+              "No speech detected. Please speak clearly and try again.",
+            );
+          }
+        } catch (error) {
+          console.error("Transcription error:", error);
+
+          setStatus(`❌ Transcription failed: ${error.message}`);
+        }
       };
 
       mediaRecorder.start();
 
-      // =========================================
-      // SPEECH TO TEXT
-      // =========================================
-      const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
+      setRecording(true);
+      setStatus("🎤 Recording... Speak clearly, then press Stop.");
+    } catch (error) {
+      console.error("Recording error:", error);
 
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-
-        recognition.lang = "en-IN";
-        recognition.continuous = true;
-        recognition.interimResults = false;
-
-        recognition.onresult = (event) => {
-          let text = "";
-
-          for (let i = event.resultIndex; i < event.results.length; i++) {
-            text += event.results[i][0].transcript + " ";
-          }
-
-          if (text.trim() && onTextGenerated) {
-            onTextGenerated(text.trim());
-          }
-        };
-
-        recognition.onerror = (event) => {
-          console.error("Speech recognition error:", event.error);
-        };
-
-        recognitionRef.current = recognition;
-        recognition.start();
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
       }
 
-      setRecording(true);
-      setStatus("🎤 Listening... Speak your memory.");
-    } catch (error) {
-      console.error("Microphone error:", error);
-
-      setStatus("❌ Microphone permission is required.");
+      setRecording(false);
+      setStatus("❌ Could not start recording. Check microphone permissions.");
     }
   };
 
   const stopRecording = () => {
-    // Stop speech recognition
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
+    const mediaRecorder = mediaRecorderRef.current;
+
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      mediaRecorder.stop();
     }
 
-    // Stop audio recording
-    if (mediaRecorderRef.current) {
-      if (mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-      }
-
-      mediaRecorderRef.current = null;
-    }
-
+    mediaRecorderRef.current = null;
     setRecording(false);
+    setStatus("⏳ Recording stopped. Preparing your transcript...");
   };
 
   return (

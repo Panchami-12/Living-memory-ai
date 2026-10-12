@@ -99,3 +99,27 @@ desktop.ini
 *.temp
 *.swp
 *.swo
+
+# Python
+backend/.venv/
+**/__pycache__/
+*.py[cod]
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Secrets and environment files
+.env
+.env.*
+!.env.example
+
+# Local database
+backend/storage/*.db
+backend/storage/*.sqlite
+backend/storage/*.sqlite3
+
+# Personal uploads
+backend/storage/uploads/
+backend/storage/memory_images/
+backend/storage/audio/

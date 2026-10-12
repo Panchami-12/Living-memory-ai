@@ -1,3 +1,4 @@
+
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -11,10 +12,25 @@ from app.core.database import (
     add_missing_columns,
 )
 
-from app.models import User, Memory
+from app.models import User, Memory, Profile
 
+from app.api.profiles import router as profiles_router
 from app.api.memory import router as memory_router
 from app.api.user import router as user_router
+
+
+# =========================================================
+# PATHS AND STORAGE
+# =========================================================
+
+BASE_DIR = Path(__file__).resolve().parents[1]
+
+UPLOAD_DIR = BASE_DIR / "storage" / "uploads"
+
+UPLOAD_DIR.mkdir(
+    parents=True,
+    exist_ok=True,
+)
 
 
 # =========================================================
@@ -35,15 +51,7 @@ app = FastAPI(
     description="Backend API for Living Memory AI",
     version="0.1.0",
 )
-# =========================================================
-# SERVE UPLOADED MEMORY IMAGES
-# =========================================================
 
-app.mount(
-    "/uploads",
-    StaticFiles(directory="storage/uploads"),
-    name="uploads"
-)
 
 # =========================================================
 # CORS
@@ -64,17 +72,8 @@ app.add_middleware(
 
 
 # =========================================================
-# UPLOADS
+# SERVE UPLOADED FILES
 # =========================================================
-
-BASE_DIR = Path(__file__).resolve().parents[1]
-
-UPLOAD_DIR = BASE_DIR / "storage" / "uploads"
-
-UPLOAD_DIR.mkdir(
-    parents=True,
-    exist_ok=True
-)
 
 app.mount(
     "/uploads",
@@ -88,8 +87,8 @@ app.mount(
 # =========================================================
 
 app.include_router(memory_router)
-
 app.include_router(user_router)
+app.include_router(profiles_router)
 
 
 # =========================================================
@@ -109,23 +108,18 @@ def root():
 
 @app.get("/health")
 def health_check():
-
     try:
-
         with engine.connect() as connection:
-            connection.execute(
-                text("SELECT 1")
-            )
+            connection.execute(text("SELECT 1"))
 
         return {
             "status": "healthy",
-            "database": "connected"
+            "database": "connected",
         }
 
     except Exception as error:
-
         return {
             "status": "unhealthy",
             "database": "disconnected",
-            "error": str(error)
+            "error": str(error),
         }
