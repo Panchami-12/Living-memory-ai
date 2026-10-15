@@ -70,6 +70,7 @@ function App() {
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
   const [editMemoryType, setEditMemoryType] = useState("personal");
+  const [editProfileId, setEditProfileId] = useState("");
   const [editLoading, setEditLoading] = useState(false);
 
   // =====================================================
@@ -79,7 +80,7 @@ function App() {
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState([]);
   const [loadingAI, setLoadingAI] = useState(false);
-
+  const [chatProfileId, setChatProfileId] = useState("");
   // =====================================================
   // RELATIONSHIP PROFILES
   // =====================================================
@@ -1393,6 +1394,9 @@ function App() {
     setEditContent(memory.content || "");
 
     setEditMemoryType(memory.memory_type || "personal");
+    setEditProfileId(
+      memory.profile_id != null ? String(memory.profile_id) : "",
+    );
 
     setMemoryMessage("");
 
@@ -1407,6 +1411,7 @@ function App() {
     setEditTitle("");
     setEditContent("");
     setEditMemoryType("personal");
+    setEditProfileId("");
     setMemoryMessage("");
   };
 
@@ -1444,6 +1449,7 @@ function App() {
           content: editContent.trim(),
           memory_type: editMemoryType,
           user_id: userId,
+          profile_id: editProfileId ? Number(editProfileId) : null,
         }),
       });
 
@@ -1528,9 +1534,7 @@ function App() {
         body: JSON.stringify({
           user_id: userId,
           question: prompt,
-
-          // Selected language is
-          // sent to the backend.
+          profile_id: chatProfileId ? Number(chatProfileId) : null,
           language: language,
         }),
       });
@@ -1815,7 +1819,10 @@ function App() {
                     type="email"
                     placeholder={ui.email}
                     value={authEmail}
-                    onChange={(event) => setAuthEmail(event.target.value)}
+                    onChange={(event) => {
+                      setChatProfileId(event.target.value);
+                      setMessages([]);
+                    }}
                     required
                   />
 
@@ -2145,7 +2152,15 @@ function App() {
             AI CHAT
         ================================================= */}
         <section className="chat-section">
-          <h2>🤖 {ui.talkMemories}</h2>
+          <h2>
+            {chatProfileId
+              ? `🧠 Chat with ${
+                  profiles.find(
+                    (profile) => String(profile.id) === String(chatProfileId),
+                  )?.name || "Selected Profile"
+                }`
+              : `🧠 ${ui.talkMemories}`}
+          </h2>
 
           <p
             style={{
@@ -2159,7 +2174,33 @@ function App() {
             {languages.find((item) => item.name === language)?.native ||
               language}
           </p>
+          <label htmlFor="chat-profile">Chat with memories of:</label>
 
+          <select
+            id="chat-profile"
+            className="chat-input"
+            value={chatProfileId}
+            onChange={(event) => setChatProfileId(event.target.value)}
+          >
+            <option value="">All my memories</option>
+
+            {profiles.map((profile) => (
+              <option key={profile.id} value={profile.id}>
+                {profile.name}
+              </option>
+            ))}
+          </select>
+          <p
+            style={{
+              margin: "6px 0 14px",
+              fontSize: "13px",
+              opacity: 0.75,
+            }}
+          >
+            {chatProfileId
+              ? "🔒 The AI will search only memories linked to this profile."
+              : "💭 The AI can search across all your saved memories."}
+          </p>
           <textarea
             className="chat-input"
             placeholder={ui.askPlaceholder}
@@ -2321,6 +2362,19 @@ function App() {
                 {memoryTypes.map((type) => (
                   <option key={type.value} value={type.value}>
                     {type.label}
+                  </option>
+                ))}
+              </select>
+              <label htmlFor="edit-profile">Linked Profile:</label>
+              <select
+                id="edit-profile"
+                value={editProfileId}
+                onChange={(event) => setEditProfileId(event.target.value)}
+              >
+                <option value="">No profile assigned</option>
+                {profiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name}
                   </option>
                 ))}
               </select>
