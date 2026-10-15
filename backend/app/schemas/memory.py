@@ -16,6 +16,18 @@ class MemoryCreate(BaseModel):
 
 
 # =========================================================
+# UPDATE MEMORY
+# =========================================================
+
+class MemoryUpdate(BaseModel):
+    title: str | None = None
+    content: str | None = None
+    memory_type: str | None = None
+    user_id: int | None = None
+    profile_id: int | None = None
+
+
+# =========================================================
 # MEMORY RESPONSE
 # =========================================================
 
@@ -31,6 +43,7 @@ class MemoryResponse(BaseModel):
     # Photo attached to the memory
     image_url: str | None = None
     audio_url: str | None = None
+
     class Config:
         from_attributes = True
 
@@ -42,3 +55,4 @@ class MemoryResponse(BaseModel):
 class ChatRequest(BaseModel):
     question: str
     user_id: int = 1
+    profile_id: int | None = None

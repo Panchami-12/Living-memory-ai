@@ -21,8 +21,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.memory import Memory
 from app.models.profile import Profile
-from app.schemas.memory import MemoryCreate, MemoryResponse, ChatRequest
-
+from app.schemas.memory import MemoryCreate, MemoryUpdate, MemoryResponse, ChatRequest
 
 # =========================================================
 # ROUTER AND STORAGE DIRECTORIES
@@ -225,26 +224,30 @@ def semantic_search(
 def search_memories(
     q: str = Query(..., min_length=1),
     user_id: int = 1,
+    profile_id: int | None = None,
     db: Session = Depends(get_db),
 ):
     search_text = q.strip()
     if not search_text:
         return []
 
+    if profile_id is not None:
+        validate_profile_for_user(profile_id, user_id, db)
+
     pattern = f"%{search_text}%"
-    return (
-        db.query(Memory)
-        .filter(
-            Memory.user_id == user_id,
-            (
-                Memory.title.ilike(pattern)
-                | Memory.content.ilike(pattern)
-                | Memory.memory_type.ilike(pattern)
-            ),
-        )
-        .order_by(Memory.id.desc())
-        .all()
+    memory_query = db.query(Memory).filter(
+        Memory.user_id == user_id,
+        (
+            Memory.title.ilike(pattern)
+            | Memory.content.ilike(pattern)
+            | Memory.memory_type.ilike(pattern)
+        ),
     )
+
+    if profile_id is not None:
+        memory_query = memory_query.filter(Memory.profile_id == profile_id)
+
+    return memory_query.order_by(Memory.id.desc()).all()
 
 
 # =========================================================
@@ -282,32 +285,64 @@ async def chat_with_memories(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    saved_memory_count = (
-        db.query(Memory)
-        .filter(Memory.user_id == data.user_id)
-        .count()
-    )
+    # If a profile was selected, verify it belongs to this user.
+    selected_profile = None
+    if data.profile_id is not None:
+        selected_profile = (
+            db.query(Profile)
+            .filter(
+                Profile.id == data.profile_id,
+                Profile.user_id == data.user_id,
+            )
+            .first()
+        )
+        if selected_profile is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Profile not found for this user.",
+            )
 
-    if saved_memory_count == 0:
+    # Count only memories in the selected scope.
+    memory_query = db.query(Memory).filter(
+        Memory.user_id == data.user_id
+    )
+    if data.profile_id is not None:
+        memory_query = memory_query.filter(
+            Memory.profile_id == data.profile_id
+        )
+
+    if memory_query.count() == 0:
+        if selected_profile is not None:
+            return {
+                "answer": (
+                    f"I don't have any memories linked to "
+                    f"{selected_profile.name}'s profile yet."
+                )
+            }
         return {"answer": "I don't have any saved memories for you yet."}
 
+    # Retrieve memories by meaning within the selected scope.
     ranked_memories = get_semantic_results(
         question=data.question,
         user_id=data.user_id,
         db=db,
+        profile_id=data.profile_id,
         limit=5,
     )
 
     if not ranked_memories:
         return {
-            "answer": "I couldn't find a relevant saved memory to answer that question."
+            "answer": (
+                "I couldn't find a relevant saved memory "
+                "to answer that question."
+            )
         }
 
-    memory_text = "\n\n".join(
+    memory_text = "\\n\\n".join(
         (
-            f"Title: {memory['title'] or ''}\n"
-            f"Type: {memory['memory_type'] or ''}\n"
-            f"Memory: {memory['content'] or ''}\n"
+            f"Title: {memory['title'] or ''}\\n"
+            f"Type: {memory['memory_type'] or ''}\\n"
+            f"Memory: {memory['content'] or ''}\\n"
             f"Similarity: {memory['similarity']}"
         )
         for memory in ranked_memories
@@ -326,12 +361,22 @@ async def chat_with_memories(
         "Tamil": "Respond in Tamil (தமிழ்).",
         "Malayalam": "Respond in Malayalam (മലയാളം).",
     }
-    language_instruction = language_instructions.get(language, "Respond in English.")
+    language_instruction = language_instructions.get(
+        language, "Respond in English."
+    )
+
+    profile_context = ""
+    if selected_profile is not None:
+        profile_context = (
+            f"Focus only on memories linked to {selected_profile.name}, "
+            f"whose relationship to the user is "
+            f"{selected_profile.relationship_type}.\\n"
+        )
 
     prompt = f"""
 You are Living Memory AI.
 
-Answer the user's question using the retrieved memories below.
+{profile_context}Answer the user's question using the retrieved memories below.
 
 Retrieved memories:
 {memory_text}
@@ -361,7 +406,10 @@ Instructions:
     except Exception as error:
         print("AI ERROR:", error)
         return {
-            "answer": "I couldn't connect to the AI service. Please make sure Ollama is running."
+            "answer": (
+                "I couldn't connect to the AI service. "
+                "Please make sure Ollama is running."
+            )
         }
 
 
@@ -589,31 +637,41 @@ def get_single_memory(
 @router.put("/{memory_id}", response_model=MemoryResponse)
 def update_memory(
     memory_id: int,
-    data: MemoryCreate,
+    data: MemoryUpdate,
     db: Session = Depends(get_db),
 ):
+    update_data = data.dict(exclude_unset=True)
+
+    if data.user_id is None:
+        raise HTTPException(status_code=400, detail="user_id is required")
+
     memory = (
         db.query(Memory)
-        .filter(Memory.id == memory_id, Memory.user_id == data.user_id)
+        .filter(
+            Memory.id == memory_id,
+            Memory.user_id == data.user_id,
+        )
         .first()
     )
+
     if memory is None:
         raise HTTPException(status_code=404, detail="Memory not found")
 
-    # If profile_id is supplied, validate it and update the link.
-    # If it is omitted/null, keep any existing profile assignment.
-    if data.profile_id is not None:
-        validate_profile_for_user(data.profile_id, memory.user_id, db)
-        memory.profile_id = data.profile_id
+    if "profile_id" in update_data:
+        profile_id = update_data["profile_id"]
 
-    memory.title = data.title
-    memory.content = data.content
-    memory.memory_type = data.memory_type
+        if profile_id is not None:
+            validate_profile_for_user(profile_id, memory.user_id, db)
+
+        memory.profile_id = profile_id
+
+    for field in ("title", "content", "memory_type"):
+        if field in update_data:
+            setattr(memory, field, update_data[field])
 
     db.commit()
     db.refresh(memory)
     return memory
-
 
 # =========================================================
 # DELETE MEMORY
