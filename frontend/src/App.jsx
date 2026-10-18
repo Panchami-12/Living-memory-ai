@@ -42,6 +42,9 @@ function App() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [memoryType, setMemoryType] = useState("personal");
+  const [memoryTypeFilter, setMemoryTypeFilter] = useState("");
+  const [dateFromFilter, setDateFromFilter] = useState("");
+  const [dateToFilter, setDateToFilter] = useState("");
   const [selectedProfileId, setSelectedProfileId] = useState("");
 
   const [saving, setSaving] = useState(false);
@@ -920,12 +923,28 @@ function App() {
   };
 
   const ui = translations[language] || translations.English;
-  const visibleMemories =
-    activeProfileFilter === null
-      ? memories
-      : memories.filter(
-          (memory) => Number(memory.profile_id) === Number(activeProfileFilter),
-        );
+  const visibleMemories = memories.filter((memory) => {
+    const matchesProfile =
+      activeProfileFilter === null ||
+      (activeProfileFilter === "unassigned"
+        ? memory.profile_id == null
+        : Number(memory.profile_id) === Number(activeProfileFilter));
+
+    const matchesType =
+      !memoryTypeFilter || memory.memory_type === memoryTypeFilter;
+
+    const memoryDate = memory.created_at
+      ? new Date(memory.created_at).toISOString().slice(0, 10)
+      : "";
+
+    const matchesFromDate =
+      !dateFromFilter || (memoryDate !== "" && memoryDate >= dateFromFilter);
+
+    const matchesToDate =
+      !dateToFilter || (memoryDate !== "" && memoryDate <= dateToFilter);
+
+    return matchesProfile && matchesType && matchesFromDate && matchesToDate;
+  });
 
   const selectedTimelineProfile = profiles.find(
     (profile) => String(profile.id) === String(timelineProfileId),
@@ -2590,11 +2609,112 @@ function App() {
           >
             Show All Memories
           </button>
-          {visibleMemories.length === 0 ? (
+          <div className="memory-filters">
+            <div className="memory-filters-header">
+              <div>
+                <h3>Filter memories</h3>
+                <p>Find moments by category or date range.</p>
+              </div>
+              <button
+                type="button"
+                className="clear-filters-button"
+                onClick={() => {
+                  setMemoryTypeFilter("");
+                  setDateFromFilter("");
+                  setDateToFilter("");
+                }}
+              >
+                ↺ Clear all
+              </button>
+            </div>
+
+            <div className="memory-filter-fields">
+              <div className="memory-filter-field">
+                <label htmlFor="memory-profile-filter">Profile</label>
+
+                <select
+                  id="memory-profile-filter"
+                  value={
+                    activeProfileFilter === null
+                      ? ""
+                      : String(activeProfileFilter)
+                  }
+                  onChange={(event) => {
+                    const value = event.target.value;
+
+                    setActiveProfileFilter(
+                      value === ""
+                        ? null
+                        : value === "unassigned"
+                          ? "unassigned"
+                          : Number(value),
+                    );
+                  }}
+                >
+                  <option value="">All profiles</option>
+                  <option value="unassigned">Unassigned memories</option>
+
+                  {profiles.map((profile) => (
+                    <option key={profile.id} value={profile.id}>
+                      {profile.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="memory-filter-field">
+                <label htmlFor="memory-type-filter">Category</label>
+                <select
+                  id="memory-type-filter"
+                  value={memoryTypeFilter}
+                  onChange={(event) => setMemoryTypeFilter(event.target.value)}
+                >
+                  <option value="">All categories</option>
+                  <option value="personal">Personal</option>
+                  <option value="college">College</option>
+                  <option value="family">Family</option>
+                  <option value="friends">Friends</option>
+                  <option value="achievement">Achievement</option>
+                  <option value="project">Project</option>
+                  <option value="food">Food</option>
+                  <option value="travel">Travel</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div className="memory-filter-field">
+                <label htmlFor="memory-date-from">From date</label>
+                <input
+                  id="memory-date-from"
+                  type="date"
+                  value={dateFromFilter}
+                  onChange={(event) => setDateFromFilter(event.target.value)}
+                />
+              </div>
+
+              <div className="memory-filter-field">
+                <label htmlFor="memory-date-to">To date</label>
+                <input
+                  id="memory-date-to"
+                  type="date"
+                  value={dateToFilter}
+                  onChange={(event) => setDateToFilter(event.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="memory-results-count">
+            Showing <strong>{visibleMemories.length}</strong>{" "}
+            {visibleMemories.length === 1 ? "memory" : "memories"}
+          </div>
+          {memories.length === 0 ? (
             <div className="empty">
               <h3>{ui.waiting}</h3>
-
               <p>{ui.firstMemory}</p>
+            </div>
+          ) : visibleMemories.length === 0 ? (
+            <div className="empty">
+              <h3>No matching memories</h3>
+              <p>Try changing the category or date filters.</p>
             </div>
           ) : (
             <div className="memory-grid">
