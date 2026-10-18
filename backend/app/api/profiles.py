@@ -183,11 +183,11 @@ def delete_profile(
     }
 
 # =========================================================
-# AI-GENERATED LIVING IDENTITY SUMMARY
+# GENERATE AI LIFE STORY
 # =========================================================
 
-@router.get("/{profile_id}/identity-summary")
-def generate_identity_summary(
+@router.get("/{profile_id}/life-story")
+def generate_life_story(
     profile_id: int,
     user_id: int,
     db: Session = Depends(get_db),
@@ -208,7 +208,7 @@ def generate_identity_summary(
             detail="Profile not found",
         )
 
-    # Retrieve memories linked to this specific person
+    # Get memories linked to this person
     memories = (
         db.query(Memory)
         .filter(
@@ -219,14 +219,13 @@ def generate_identity_summary(
         .all()
     )
 
-    # Don't invent a summary when there is no information
     if not memories and not profile.description:
         return {
             "profile_id": profile.id,
             "profile_name": profile.name,
-            "summary": (
-                "Not enough saved information yet. "
-                "Add memories to build this person's identity."
+            "story": (
+                "There is not enough saved information to "
+                "create this person's life story yet."
             ),
             "memories_used": 0,
         }
@@ -235,51 +234,54 @@ def generate_identity_summary(
         [
             f"Title: {memory.title}\n"
             f"Type: {memory.memory_type}\n"
-            f"Memory: {memory.content}"
+            f"Memory: {memory.content}\n"
+            f"Record saved on: {memory.created_at or 'Date unavailable'}"
             for memory in memories
         ]
     )
 
     prompt = f"""
-You are Living Memory AI's Living Identity assistant.
+You are Living Memory AI's Life Story writer.
 
-Create a helpful summary of the person using only the
-profile details and linked memories provided below.
+Create a warm, meaningful narrative using only the
+profile details and memories provided below.
 
-Person's name: {profile.name}
+Name: {profile.name}
 Relationship: {profile.relationship_type}
-Profile description: {profile.description or "Not provided"}
+Description: {profile.description or "Not provided"}
 
 Saved memories:
 {memory_text or "No linked memories are available."}
 
 Rules:
-- Summarize documented life experiences and interests.
-- Describe personality traits only when supported by evidence.
-- Never invent events, preferences, relationships, or facts.
-- If information is limited, clearly say so.
-- Distinguish known facts from tentative observations.
-- Do not claim to know the person's thoughts or feelings
-  unless the saved information supports that claim.
-- Write a warm, natural summary in 1 to 3 paragraphs.
+- Use only facts supported by the supplied information.
+- Include important experiences, people, interests, and events
+  when they are documented.
+- Never invent events, dates, relationships, or emotions.
+- A record's saved date is not necessarily the date the
+  event happened.
+- Use chronological order only when the event dates or
+  sequence are supported by the information.
+- If information is limited, acknowledge that naturally.
+- Write a warm, readable life story in 3 to 6 paragraphs.
 """
 
     try:
         from app.services.ai_service import ask_ai
 
-        summary = ask_ai(prompt)
+        story = ask_ai(prompt)
 
         return {
             "profile_id": profile.id,
             "profile_name": profile.name,
-            "summary": summary,
+            "story": story,
             "memories_used": len(memories),
         }
 
     except Exception as error:
-        print("IDENTITY SUMMARY ERROR:", error)
+        print("LIFE STORY ERROR:", error)
 
         raise HTTPException(
             status_code=502,
-            detail="Could not generate the identity summary.",
+            detail="Could not generate the life story.",
         )
