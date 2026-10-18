@@ -87,10 +87,14 @@ function App() {
 
   const [profiles, setProfiles] = useState([]);
   const [activeProfileFilter, setActiveProfileFilter] = useState(null);
+  const [timelineProfileId, setTimelineProfileId] = useState("");
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [identitySummaries, setIdentitySummaries] = useState({});
   const [identityLoadingId, setIdentityLoadingId] = useState(null);
   const [identityErrors, setIdentityErrors] = useState({});
+  const [lifeStories, setLifeStories] = useState({});
+  const [lifeStoryLoadingId, setLifeStoryLoadingId] = useState(null);
+  const [lifeStoryErrors, setLifeStoryErrors] = useState({});
   const [profileName, setProfileName] = useState("");
   const [profileRelationship, setProfileRelationship] = useState("");
   const [profileDescription, setProfileDescription] = useState("");
@@ -922,6 +926,26 @@ function App() {
       : memories.filter(
           (memory) => Number(memory.profile_id) === Number(activeProfileFilter),
         );
+
+  const selectedTimelineProfile = profiles.find(
+    (profile) => String(profile.id) === String(timelineProfileId),
+  );
+
+  const timelineMemories = [...memories]
+    .filter((memory) => {
+      if (timelineProfileId === "unassigned") {
+        return memory.profile_id == null;
+      }
+      if (!timelineProfileId) {
+        return true;
+      }
+      return String(memory.profile_id) === String(timelineProfileId);
+    })
+    .sort(
+      (a, b) =>
+        new Date(a.created_at || 0).getTime() -
+        new Date(b.created_at || 0).getTime(),
+    );
   // =====================================================
   // IMAGE
   // =====================================================
@@ -1743,6 +1767,52 @@ function App() {
     }
   };
   // =====================================================
+  // GENERATE AI LIFE STORY
+  // =====================================================
+
+  const generateLifeStory = async (profile) => {
+    if (!userId) {
+      setLifeStoryErrors((previous) => ({
+        ...previous,
+        [profile.id]: "Please log in first.",
+      }));
+      return;
+    }
+
+    setLifeStoryLoadingId(profile.id);
+
+    setLifeStoryErrors((previous) => ({
+      ...previous,
+      [profile.id]: "",
+    }));
+
+    try {
+      const response = await fetch(
+        `${API}/profiles/${profile.id}/life-story?user_id=${userId}`,
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Could not generate life story.");
+      }
+
+      setLifeStories((previous) => ({
+        ...previous,
+        [profile.id]: data.story,
+      }));
+    } catch (error) {
+      console.error("Life story error:", error);
+
+      setLifeStoryErrors((previous) => ({
+        ...previous,
+        [profile.id]: error.message || "Something went wrong.",
+      }));
+    } finally {
+      setLifeStoryLoadingId(null);
+    }
+  };
+  // =====================================================
   // MEMORY TYPES
   // =====================================================
 
@@ -1819,10 +1889,7 @@ function App() {
                     type="email"
                     placeholder={ui.email}
                     value={authEmail}
-                    onChange={(event) => {
-                      setChatProfileId(event.target.value);
-                      setMessages([]);
-                    }}
+                    onChange={(event) => setAuthEmail(event.target.value)}
                     required
                   />
 
@@ -2699,7 +2766,49 @@ function App() {
                     <p>{identitySummaries[profile.id]}</p>
                   </div>
                 )}
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => generateLifeStory(profile)}
+                  disabled={lifeStoryLoadingId === profile.id}
+                >
+                  {lifeStoryLoadingId === profile.id
+                    ? "Writing life story..."
+                    : "📖 Generate AI Life Story"}
+                </button>
 
+                {lifeStoryErrors[profile.id] && (
+                  <p className="message">{lifeStoryErrors[profile.id]}</p>
+                )}
+
+                {lifeStories[profile.id] && (
+                  <div className="identity-summary">
+                    <h4>📖 {profile.name}'s Life Story</h4>
+
+                    <p style={{ whiteSpace: "pre-wrap" }}>
+                      {lifeStories[profile.id]}
+                    </p>
+
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(
+                            lifeStories[profile.id],
+                          );
+                          window.alert("Life story copied successfully! 💗");
+                        } catch {
+                          window.alert(
+                            "Copy failed. Please select the story text and copy it manually.",
+                          );
+                        }
+                      }}
+                    >
+                      📋 Copy Life Story
+                    </button>
+                  </div>
+                )}
                 <button
                   type="button"
                   className="primary-button"
@@ -2789,8 +2898,101 @@ function App() {
           )}
         </section>
         {/* =================================================
-    ABOUT
-================================================= */}
+            PERSONAL MEMORY TIMELINE
+        ================================================= */}
+        <section className="card">
+          <h2>
+            {selectedTimelineProfile
+              ? `🕰️ ${selectedTimelineProfile.name}'s Memory Timeline`
+              : timelineProfileId === "unassigned"
+                ? "🕰️ Unassigned Memory Timeline"
+                : "🕰️ Personal Memory Timeline"}
+          </h2>
+          <p>Choose a person to explore only the memories linked to them.</p>
+
+          <label htmlFor="timeline-profile">Show timeline for:</label>
+          <select
+            id="timeline-profile"
+            value={timelineProfileId}
+            onChange={(event) => setTimelineProfileId(event.target.value)}
+            style={{
+              display: "block",
+              width: "100%",
+              maxWidth: "420px",
+              padding: "10px 12px",
+              margin: "8px 0 18px",
+              borderRadius: "8px",
+            }}
+          >
+            <option value="">All profiles</option>
+            <option value="unassigned">Unassigned memories</option>
+            {profiles.map((profile) => (
+              <option key={profile.id} value={String(profile.id)}>
+                {profile.name}
+              </option>
+            ))}
+          </select>
+
+          {timelineMemories.length === 0 ? (
+            <p>
+              {timelineProfileId
+                ? "No memories are linked to this selection yet."
+                : "No memories available yet."}
+            </p>
+          ) : (
+            <div
+              style={{
+                marginTop: "20px",
+                marginLeft: "10px",
+                paddingLeft: "20px",
+                borderLeft: "2px solid #a78bfa",
+              }}
+            >
+              {timelineMemories.map((memory) => {
+                const linkedProfile = profiles.find(
+                  (profile) => String(profile.id) === String(memory.profile_id),
+                );
+
+                return (
+                  <article
+                    key={`timeline-${memory.id}`}
+                    style={{
+                      marginBottom: "24px",
+                      position: "relative",
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: "absolute",
+                        left: "-27px",
+                        top: "5px",
+                        width: "12px",
+                        height: "12px",
+                        borderRadius: "50%",
+                        background: "#a78bfa",
+                      }}
+                    />
+
+                    <small>
+                      {memory.created_at
+                        ? new Date(memory.created_at).toLocaleDateString()
+                        : "Date unavailable"}
+                    </small>
+
+                    <h3>{memory.title}</h3>
+                    <p>{memory.content}</p>
+
+                    <div className="memory-meta">
+                      <span>{linkedProfile?.name || "Unassigned memory"}</span>
+                      <span>{memory.memory_type || "personal"}</span>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
         {/* =================================================
             ABOUT
         ================================================= */}
