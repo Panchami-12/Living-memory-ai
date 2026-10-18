@@ -923,6 +923,279 @@ function App() {
   };
 
   const ui = translations[language] || translations.English;
+  const profileTranslations = {
+    English: {
+      label: "👥 RELATIONSHIP PROFILES",
+      title: "People Behind Your Memories",
+      description: "Organize memories around the people who matter most.",
+      mother: "Mother",
+      motherDescription:
+        "Family memories, stories, advice and special moments.",
+      father: "Father",
+      fatherDescription:
+        "Important experiences, conversations and family memories.",
+      viewMemories: "View Memories →",
+      generateSummary: "🧠 Generate AI Summary",
+      generateLifeStory: "📖 Generate AI Life Story",
+    },
+    Kannada: {
+      label: "👥 ಸಂಬಂಧಗಳ ಪ್ರೊಫೈಲ್‌ಗಳು",
+      title: "ನಿಮ್ಮ ನೆನಪುಗಳ ಹಿಂದಿರುವ ಜನರು",
+      description: "ನಿಮಗೆ ಮುಖ್ಯವಾದ ಜನರ ಸುತ್ತ ನಿಮ್ಮ ನೆನಪುಗಳನ್ನು ಆಯೋಜಿಸಿ.",
+      mother: "ತಾಯಿ",
+      motherDescription:
+        "ಕುಟುಂಬದ ನೆನಪುಗಳು, ಕಥೆಗಳು, ಸಲಹೆಗಳು ಮತ್ತು ವಿಶೇಷ ಕ್ಷಣಗಳು.",
+      father: "ತಂದೆ",
+      fatherDescription: "ಪ್ರಮುಖ ಅನುಭವಗಳು, ಸಂಭಾಷಣೆಗಳು ಮತ್ತು ಕುಟುಂಬದ ನೆನಪುಗಳು.",
+      viewMemories: "ನೆನಪುಗಳನ್ನು ನೋಡಿ →",
+      generateSummary: "🧠 AI ಸಾರಾಂಶ ರಚಿಸಿ",
+      generateLifeStory: "📖 AI ಜೀವನ ಕಥೆ ರಚಿಸಿ",
+    },
+    Hindi: {
+      label: "👥 रिश्तों की प्रोफ़ाइल",
+      title: "आपकी यादों के पीछे के लोग",
+      description: "अपने महत्वपूर्ण लोगों से जुड़ी यादों को व्यवस्थित करें।",
+      mother: "माँ",
+      motherDescription: "परिवार की यादें, कहानियाँ, सलाह और खास पल।",
+      father: "पिता",
+      fatherDescription: "महत्वपूर्ण अनुभव, बातचीत और पारिवारिक यादें।",
+      viewMemories: "यादें देखें →",
+      generateSummary: "🧠 AI सारांश बनाएं",
+      generateLifeStory: "📖 AI जीवन कहानी बनाएं",
+    },
+    Tamil: {
+      label: "👥 உறவினர் சுயவிவரங்கள்",
+      title: "உங்கள் நினைவுகளுக்குப் பின்னால் உள்ளவர்கள்",
+      description:
+        "உங்களுக்கு முக்கியமானவர்களுடன் தொடர்புடைய நினைவுகளை ஒழுங்குபடுத்துங்கள்.",
+      mother: "அம்மா",
+      motherDescription:
+        "குடும்ப நினைவுகள், கதைகள், ஆலோசனைகள் மற்றும் சிறப்பான தருணங்கள்.",
+      father: "அப்பா",
+      fatherDescription:
+        "முக்கிய அனுபவங்கள், உரையாடல்கள் மற்றும் குடும்ப நினைவுகள்.",
+      viewMemories: "நினைவுகளைக் காண்க →",
+      generateSummary: "🧠 AI சுருக்கத்தை உருவாக்கு",
+      generateLifeStory: "📖 AI வாழ்க்கைக் கதையை உருவாக்கு",
+    },
+    Malayalam: {
+      label: "👥 ബന്ധങ്ങളുടെ പ്രൊഫൈലുകൾ",
+      title: "നിങ്ങളുടെ ഓർമ്മകൾക്ക് പിന്നിലെ ആളുകൾ",
+      description:
+        "നിങ്ങൾക്ക് പ്രധാനപ്പെട്ട ആളുകളുമായി ബന്ധപ്പെട്ട ഓർമ്മകൾ ക്രമീകരിക്കൂ.",
+      mother: "അമ്മ",
+      motherDescription: "കുടുംബ ഓർമ്മകൾ, കഥകൾ, ഉപദേശങ്ങൾ, പ്രത്യേക നിമിഷങ്ങൾ.",
+      father: "അച്ഛൻ",
+      fatherDescription: "പ്രധാന അനുഭവങ്ങൾ, സംഭാഷണങ്ങൾ, കുടുംബ ഓർമ്മകൾ.",
+      viewMemories: "ഓർമ്മകൾ കാണുക →",
+      generateSummary: "🧠 AI സംഗ്രഹം സൃഷ്ടിക്കുക",
+      generateLifeStory: "📖 AI ജീവിതകഥ സൃഷ്ടിക്കുക",
+    },
+  };
+
+  const profileUi =
+    profileTranslations[language] || profileTranslations.English;
+
+  const profileMoreTranslations = {
+    English: {
+      mom: "Mom",
+      dad: "Dad",
+      defaultDescription: "Personal memories and important moments.",
+      addProfile: "Add Profile",
+      addProfileDescription:
+        "Create a profile for someone important in your life.",
+      createProfile: "+ Create Profile",
+      createRelationshipProfile: "Create Relationship Profile",
+      name: "Name",
+      relationship: "Relationship",
+      description: "Description",
+      creating: "Creating...",
+      cancel: "Cancel",
+      generatingSummary: "Generating summary...",
+      writingLifeStory: "Writing life story...",
+      livingIdentity: "✨ Living Identity",
+      lifeStoryTitle: "📖 {name}'s Life Story",
+      copyLifeStory: "📋 Copy Life Story",
+      copySuccess: "Life story copied successfully! 💗",
+      copyFail:
+        "Copy failed. Please select the story text and copy it manually.",
+    },
+    Kannada: {
+      mom: "ಅಮ್ಮ",
+      dad: "ಅಪ್ಪ",
+      defaultDescription: "ವೈಯಕ್ತಿಕ ನೆನಪುಗಳು ಮತ್ತು ಪ್ರಮುಖ ಕ್ಷಣಗಳು.",
+      addProfile: "ಪ್ರೊಫೈಲ್ ಸೇರಿಸಿ",
+      addProfileDescription:
+        "ನಿಮ್ಮ ಜೀವನದಲ್ಲಿ ಮುಖ್ಯವಾದ ವ್ಯಕ್ತಿಗಾಗಿ ಪ್ರೊಫೈಲ್ ರಚಿಸಿ.",
+      createProfile: "+ ಪ್ರೊಫೈಲ್ ರಚಿಸಿ",
+      createRelationshipProfile: "ಸಂಬಂಧದ ಪ್ರೊಫೈಲ್ ರಚಿಸಿ",
+      name: "ಹೆಸರು",
+      relationship: "ಸಂಬಂಧ",
+      description: "ವಿವರಣೆ",
+      creating: "ರಚಿಸಲಾಗುತ್ತಿದೆ...",
+      cancel: "ರದ್ದುಮಾಡಿ",
+      generatingSummary: "ಸಾರಾಂಶ ರಚಿಸಲಾಗುತ್ತಿದೆ...",
+      writingLifeStory: "ಜೀವನ ಕಥೆ ಬರೆಯಲಾಗುತ್ತಿದೆ...",
+      livingIdentity: "✨ ಜೀವನದ ಪರಿಚಯ",
+      lifeStoryTitle: "📖 {name} ಅವರ ಜೀವನ ಕಥೆ",
+      copyLifeStory: "📋 ಜೀವನ ಕಥೆಯನ್ನು ನಕಲಿಸಿ",
+      copySuccess: "ಜೀವನ ಕಥೆಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ನಕಲಿಸಲಾಗಿದೆ! 💗",
+      copyFail:
+        "ನಕಲಿಸಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ. ಕಥೆಯ ಪಠ್ಯವನ್ನು ಆಯ್ಕೆಮಾಡಿ ಕೈಯಾರೆ ನಕಲಿಸಿ.",
+    },
+    Hindi: {
+      mom: "माँ",
+      dad: "पापा",
+      defaultDescription: "व्यक्तिगत यादें और महत्वपूर्ण पल।",
+      addProfile: "प्रोफ़ाइल जोड़ें",
+      addProfileDescription:
+        "अपने जीवन के किसी महत्वपूर्ण व्यक्ति के लिए प्रोफ़ाइल बनाएं।",
+      createProfile: "+ प्रोफ़ाइल बनाएं",
+      createRelationshipProfile: "रिश्ते की प्रोफ़ाइल बनाएं",
+      name: "नाम",
+      relationship: "रिश्ता",
+      description: "विवरण",
+      creating: "बनाया जा रहा है...",
+      cancel: "रद्द करें",
+      generatingSummary: "सारांश बनाया जा रहा है...",
+      writingLifeStory: "जीवन कहानी लिखी जा रही है...",
+      livingIdentity: "✨ जीवंत पहचान",
+      lifeStoryTitle: "📖 {name} की जीवन कहानी",
+      copyLifeStory: "📋 जीवन कहानी कॉपी करें",
+      copySuccess: "जीवन कहानी सफलतापूर्वक कॉपी हो गई! 💗",
+      copyFail:
+        "कॉपी नहीं हो सकी। कहानी का टेक्स्ट चुनकर मैन्युअल रूप से कॉपी करें।",
+    },
+    Tamil: {
+      mom: "அம்மா",
+      dad: "அப்பா",
+      defaultDescription: "தனிப்பட்ட நினைவுகளும் முக்கியமான தருணங்களும்.",
+      addProfile: "சுயவிவரத்தைச் சேர்க்கவும்",
+      addProfileDescription:
+        "உங்கள் வாழ்க்கையில் முக்கியமான ஒருவருக்கான சுயவிவரத்தை உருவாக்கவும்.",
+      createProfile: "+ சுயவிவரத்தை உருவாக்கவும்",
+      createRelationshipProfile: "உறவு சுயவிவரத்தை உருவாக்கவும்",
+      name: "பெயர்",
+      relationship: "உறவு",
+      description: "விளக்கம்",
+      creating: "உருவாக்கப்படுகிறது...",
+      cancel: "ரத்து செய்",
+      generatingSummary: "சுருக்கம் உருவாக்கப்படுகிறது...",
+      writingLifeStory: "வாழ்க்கைக் கதை எழுதப்படுகிறது...",
+      livingIdentity: "✨ வாழ்வின் அடையாளம்",
+      lifeStoryTitle: "📖 {name} அவர்களின் வாழ்க்கைக் கதை",
+      copyLifeStory: "📋 வாழ்க்கைக் கதையை நகலெடு",
+      copySuccess: "வாழ்க்கைக் கதை வெற்றிகரமாக நகலெடுக்கப்பட்டது! 💗",
+      copyFail:
+        "நகலெடுக்க முடியவில்லை. கதையின் உரையைத் தேர்ந்தெடுத்து கைமுறையாக நகலெடுக்கவும்.",
+    },
+    Malayalam: {
+      mom: "അമ്മ",
+      dad: "അച്ഛൻ",
+      defaultDescription: "വ്യക്തിപരമായ ഓർമ്മകളും പ്രധാനപ്പെട്ട നിമിഷങ്ങളും.",
+      addProfile: "പ്രൊഫൈൽ ചേർക്കുക",
+      addProfileDescription:
+        "നിങ്ങളുടെ ജീവിതത്തിലെ പ്രധാനപ്പെട്ട ഒരാൾക്കായി പ്രൊഫൈൽ സൃഷ്ടിക്കുക.",
+      createProfile: "+ പ്രൊഫൈൽ സൃഷ്ടിക്കുക",
+      createRelationshipProfile: "ബന്ധത്തിന്റെ പ്രൊഫൈൽ സൃഷ്ടിക്കുക",
+      name: "പേര്",
+      relationship: "ബന്ധം",
+      description: "വിവരണം",
+      creating: "സൃഷ്ടിക്കുന്നു...",
+      cancel: "റദ്ദാക്കുക",
+      generatingSummary: "സംഗ്രഹം സൃഷ്ടിക്കുന്നു...",
+      writingLifeStory: "ജീവിതകഥ എഴുതുന്നു...",
+      livingIdentity: "✨ ജീവിതപരിചയം",
+      lifeStoryTitle: "📖 {name}-ന്റെ ജീവിതകഥ",
+      copyLifeStory: "📋 ജീവിതകഥ പകർത്തുക",
+      copySuccess: "ജീവിതകഥ വിജയകരമായി പകർത്തി! 💗",
+      copyFail: "പകർത്താനായില്ല. കഥയിലെ വാചകം തിരഞ്ഞെടുത്ത് സ്വമേധയാ പകർത്തുക.",
+    },
+  };
+  const profileMoreUi =
+    profileMoreTranslations[language] || profileMoreTranslations.English;
+
+  const timelineTranslations = {
+    English: {
+      personalTitle: "🕰️ Personal Memory Timeline",
+      unassignedTitle: "🕰️ Unassigned Memory Timeline",
+      personTitleSuffix: "'s Memory Timeline",
+      description:
+        "Choose a person to explore only the memories linked to them.",
+      showFor: "Show timeline for:",
+      allProfiles: "All profiles",
+      unassignedMemories: "Unassigned memories",
+      noLinkedMemories: "No memories are linked to this selection yet.",
+      noMemories: "No memories available yet.",
+      dateUnavailable: "Date unavailable",
+      unassignedMemory: "Unassigned memory",
+    },
+    Kannada: {
+      personalTitle: "🕰️ ವೈಯಕ್ತಿಕ ನೆನಪುಗಳ ಕಾಲರೇಖೆ",
+      unassignedTitle: "🕰️ ನಿಯೋಜಿಸದ ನೆನಪುಗಳ ಕಾಲರೇಖೆ",
+      personTitleSuffix: " ಅವರ ನೆನಪುಗಳ ಕಾಲರೇಖೆ",
+      description:
+        "ಆ ವ್ಯಕ್ತಿಗೆ ಸಂಬಂಧಿಸಿದ ನೆನಪುಗಳನ್ನು ಮಾತ್ರ ನೋಡಲು ಒಬ್ಬರನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+      showFor: "ಯಾರ ಕಾಲರೇಖೆಯನ್ನು ತೋರಿಸಬೇಕು:",
+      allProfiles: "ಎಲ್ಲಾ ಪ್ರೊಫೈಲ್‌ಗಳು",
+      unassignedMemories: "ನಿಯೋಜಿಸದ ನೆನಪುಗಳು",
+      noLinkedMemories: "ಈ ಆಯ್ಕೆಗೆ ಇನ್ನೂ ಯಾವುದೇ ನೆನಪುಗಳನ್ನು ಲಿಂಕ್ ಮಾಡಿಲ್ಲ.",
+      noMemories: "ಇನ್ನೂ ಯಾವುದೇ ನೆನಪುಗಳು ಲಭ್ಯವಿಲ್ಲ.",
+      dateUnavailable: "ದಿನಾಂಕ ಲಭ್ಯವಿಲ್ಲ",
+      unassignedMemory: "ನಿಯೋಜಿಸದ ನೆನಪು",
+    },
+    Hindi: {
+      personalTitle: "🕰️ व्यक्तिगत यादों की समयरेखा",
+      unassignedTitle: "🕰️ बिना प्रोफ़ाइल वाली यादों की समयरेखा",
+      personTitleSuffix: " की यादों की समयरेखा",
+      description: "किसी व्यक्ति से जुड़ी यादें देखने के लिए उसे चुनें।",
+      showFor: "किसकी समयरेखा दिखाएं:",
+      allProfiles: "सभी प्रोफ़ाइल",
+      unassignedMemories: "बिना प्रोफ़ाइल वाली यादें",
+      noLinkedMemories: "इस चयन से अभी कोई याद जुड़ी नहीं है।",
+      noMemories: "अभी कोई याद उपलब्ध नहीं है।",
+      dateUnavailable: "तारीख उपलब्ध नहीं है",
+      unassignedMemory: "बिना प्रोफ़ाइल की याद",
+    },
+    Tamil: {
+      personalTitle: "🕰️ தனிப்பட்ட நினைவுகளின் காலவரிசை",
+      unassignedTitle: "🕰️ ஒதுக்கப்படாத நினைவுகளின் காலவரிசை",
+      personTitleSuffix: " அவர்களின் நினைவுகளின் காலவரிசை",
+      description:
+        "ஒருவருடன் இணைக்கப்பட்ட நினைவுகளை மட்டும் காண அவரைத் தேர்ந்தெடுக்கவும்.",
+      showFor: "காலவரிசையைக் காண்பிக்க:",
+      allProfiles: "அனைத்து சுயவிவரங்களும்",
+      unassignedMemories: "ஒதுக்கப்படாத நினைவுகள்",
+      noLinkedMemories: "இந்தத் தேர்வுடன் இன்னும் நினைவுகள் இணைக்கப்படவில்லை.",
+      noMemories: "இன்னும் நினைவுகள் எதுவும் இல்லை.",
+      dateUnavailable: "தேதி கிடைக்கவில்லை",
+      unassignedMemory: "ஒதுக்கப்படாத நினைவு",
+    },
+    Malayalam: {
+      personalTitle: "🕰️ വ്യക്തിഗത ഓർമ്മകളുടെ കാലരേഖ",
+      unassignedTitle: "🕰️ നിയോഗിക്കാത്ത ഓർമ്മകളുടെ കാലരേഖ",
+      personTitleSuffix: "-ന്റെ ഓർമ്മകളുടെ കാലരേഖ",
+      description:
+        "ഒരു വ്യക്തിയുമായി ബന്ധിപ്പിച്ച ഓർമ്മകൾ മാത്രം കാണാൻ ആ വ്യക്തിയെ തിരഞ്ഞെടുക്കുക.",
+      showFor: "കാലരേഖ കാണിക്കേണ്ടത്:",
+      allProfiles: "എല്ലാ പ്രൊഫൈലുകളും",
+      unassignedMemories: "നിയോഗിക്കാത്ത ഓർമ്മകൾ",
+      noLinkedMemories:
+        "ഈ തിരഞ്ഞെടുപ്പുമായി ഓർമ്മകളൊന്നും ഇതുവരെ ബന്ധിപ്പിച്ചിട്ടില്ല.",
+      noMemories: "ഇതുവരെ ഓർമ്മകളൊന്നും ലഭ്യമല്ല.",
+      dateUnavailable: "തീയതി ലഭ്യമല്ല",
+      unassignedMemory: "നിയോഗിക്കാത്ത ഓർമ്മ",
+    },
+  };
+  const timelineUi =
+    timelineTranslations[language] || timelineTranslations.English;
+  const languageLocales = {
+    English: "en-US",
+    Kannada: "kn-IN",
+    Hindi: "hi-IN",
+    Tamil: "ta-IN",
+    Malayalam: "ml-IN",
+  };
   const visibleMemories = memories.filter((memory) => {
     const matchesProfile =
       activeProfileFilter === null ||
@@ -934,7 +1207,13 @@ function App() {
       !memoryTypeFilter || memory.memory_type === memoryTypeFilter;
 
     const memoryDate = memory.created_at
-      ? new Date(memory.created_at).toISOString().slice(0, 10)
+      ? (() => {
+          const date = new Date(memory.created_at);
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, "0");
+          const day = String(date.getDate()).padStart(2, "0");
+          return `${year}-${month}-${day}`;
+        })()
       : "";
 
     const matchesFromDate =
@@ -1615,6 +1894,92 @@ function App() {
     } finally {
       setLoadingAI(false);
     }
+  };
+
+  // =====================================================
+  // AI VOICE REPLY — LOCAL KANNADA TTS
+  // =====================================================
+
+  const speakAIResponse = async (text) => {
+    if (["Kannada", "Hindi", "Tamil", "Malayalam"].includes(language)) {
+      try {
+        const response = await fetch("http://127.0.0.1:8002/tts/speak", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            text,
+            language,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Local Kannada voice generation failed.");
+        }
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+        };
+
+        audio.onerror = () => {
+          URL.revokeObjectURL(audioUrl);
+        };
+
+        await audio.play();
+        return;
+      } catch (error) {
+        console.error("Kannada voice error:", error);
+
+        alert(
+          "Could not generate Kannada voice. " +
+            "Please check that your local TTS server is running on port 8002.",
+        );
+        return;
+      }
+    }
+
+    // For other languages, use an available offline browser voice.
+    const synth = window.speechSynthesis;
+
+    if (!synth) {
+      alert("Voice is not supported in this browser.");
+      return;
+    }
+
+    const languageCodes = {
+      English: "en-IN",
+      Hindi: "hi-IN",
+      Tamil: "ta-IN",
+      Malayalam: "ml-IN",
+    };
+
+    const target = languageCodes[language] || "en-IN";
+    const voices = synth
+      .getVoices()
+      .filter((voice) => voice.localService === true);
+
+    const voice =
+      voices.find((v) => v.lang.toLowerCase() === target.toLowerCase()) ||
+      voices.find((v) => v.lang.split("-")[0] === target.split("-")[0]);
+
+    if (!voice) {
+      alert(`No offline ${language} voice is available yet.`);
+      return;
+    }
+
+    synth.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
+    utterance.rate = 0.95;
+
+    synth.speak(utterance);
   };
 
   // =====================================================
@@ -2344,7 +2709,15 @@ function App() {
                       ? `👤 ${ui.you}`
                       : "🤖 Living Memory AI"}
                   </strong>
-
+                  {message.role === "assistant" && (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => speakAIResponse(message.content)}
+                    >
+                      🔊 Listen
+                    </button>
+                  )}
                   <p>{message.content}</p>
                 </div>
               ))
@@ -2793,22 +3166,22 @@ function App() {
 
         <section id="profiles" className="profiles-section">
           <div className="section-heading">
-            <span className="section-label">👥 RELATIONSHIP PROFILES</span>
+            <span className="section-label">{profileUi.label}</span>
 
-            <h2>People Behind Your Memories</h2>
+            <h2>{profileUi.title}</h2>
 
-            <p>Organize memories around the people who matter most.</p>
+            <p>{profileUi.description}</p>
           </div>
 
           <div className="profiles-grid">
             <article className="profile-card">
               <div className="profile-avatar">👩</div>
 
-              <h3>Mom</h3>
+              <h3>{profileMoreUi.mom}</h3>
 
-              <span className="profile-relation">Mother</span>
+              <span className="profile-relation">{profileUi.mother}</span>
 
-              <p>Family memories, stories, advice and special moments.</p>
+              <p>{profileUi.motherDescription}</p>
 
               <button
                 type="button"
@@ -2822,18 +3195,18 @@ function App() {
                   });
                 }}
               >
-                View Memories →
+                {profileUi.viewMemories}
               </button>
             </article>
 
             <article className="profile-card">
               <div className="profile-avatar">👨</div>
 
-              <h3>Dad</h3>
+              <h3>{profileMoreUi.dad}</h3>
 
-              <span className="profile-relation">Father</span>
+              <span className="profile-relation">{profileUi.father}</span>
 
-              <p>Important experiences, conversations and family memories.</p>
+              <p>{profileUi.fatherDescription}</p>
 
               <button
                 type="button"
@@ -2846,7 +3219,7 @@ function App() {
                   });
                 }}
               >
-                View Memories →
+                {profileUi.viewMemories}
               </button>
             </article>
 
@@ -2860,10 +3233,7 @@ function App() {
                   {profile.relationship_type}
                 </span>
 
-                <p>
-                  {profile.description ||
-                    "Personal memories and important moments."}
-                </p>
+                <p>{profile.description || profileMoreUi.defaultDescription}</p>
 
                 <button
                   type="button"
@@ -2872,8 +3242,8 @@ function App() {
                   disabled={identityLoadingId === profile.id}
                 >
                   {identityLoadingId === profile.id
-                    ? "Generating summary..."
-                    : "🧠 Generate AI Summary"}
+                    ? profileMoreUi.generatingSummary
+                    : profileUi.generateSummary}
                 </button>
 
                 {identityErrors[profile.id] && (
@@ -2882,7 +3252,7 @@ function App() {
 
                 {identitySummaries[profile.id] && (
                   <div className="identity-summary">
-                    <h4>✨ Living Identity</h4>
+                    <h4>{profileMoreUi.livingIdentity}</h4>
                     <p>{identitySummaries[profile.id]}</p>
                   </div>
                 )}
@@ -2893,8 +3263,8 @@ function App() {
                   disabled={lifeStoryLoadingId === profile.id}
                 >
                   {lifeStoryLoadingId === profile.id
-                    ? "Writing life story..."
-                    : "📖 Generate AI Life Story"}
+                    ? profileMoreUi.writingLifeStory
+                    : profileUi.generateLifeStory}
                 </button>
 
                 {lifeStoryErrors[profile.id] && (
@@ -2903,7 +3273,12 @@ function App() {
 
                 {lifeStories[profile.id] && (
                   <div className="identity-summary">
-                    <h4>📖 {profile.name}'s Life Story</h4>
+                    <h4>
+                      {profileMoreUi.lifeStoryTitle.replace(
+                        "{name}",
+                        profile.name,
+                      )}
+                    </h4>
 
                     <p style={{ whiteSpace: "pre-wrap" }}>
                       {lifeStories[profile.id]}
@@ -2917,15 +3292,13 @@ function App() {
                           await navigator.clipboard.writeText(
                             lifeStories[profile.id],
                           );
-                          window.alert("Life story copied successfully! 💗");
+                          window.alert(profileMoreUi.copySuccess);
                         } catch {
-                          window.alert(
-                            "Copy failed. Please select the story text and copy it manually.",
-                          );
+                          window.alert(profileMoreUi.copyFail);
                         }
                       }}
                     >
-                      📋 Copy Life Story
+                      {profileMoreUi.copyLifeStory}
                     </button>
                   </div>
                 )}
@@ -2941,7 +3314,7 @@ function App() {
                     });
                   }}
                 >
-                  View Memories →
+                  {profileUi.viewMemories}
                 </button>
               </article>
             ))}
@@ -2949,9 +3322,9 @@ function App() {
             <article className="profile-card add-profile-card">
               <div className="profile-avatar">＋</div>
 
-              <h3>Add Profile</h3>
+              <h3>{profileMoreUi.addProfile}</h3>
 
-              <p>Create a profile for someone important in your life.</p>
+              <p>{profileMoreUi.addProfileDescription}</p>
 
               <button
                 type="button"
@@ -2961,18 +3334,18 @@ function App() {
                   setProfileMessage("");
                 }}
               >
-                + Create Profile
+                {profileMoreUi.createProfile}
               </button>
             </article>
           </div>
 
           {showProfileForm && (
             <form className="card" onSubmit={createProfile}>
-              <h3>Create Relationship Profile</h3>
+              <h3>{profileMoreUi.createRelationshipProfile}</h3>
 
               <input
                 type="text"
-                placeholder="Name"
+                placeholder={profileMoreUi.name}
                 value={profileName}
                 onChange={(event) => setProfileName(event.target.value)}
                 required
@@ -2980,14 +3353,14 @@ function App() {
 
               <input
                 type="text"
-                placeholder="Relationship"
+                placeholder={profileMoreUi.relationship}
                 value={profileRelationship}
                 onChange={(event) => setProfileRelationship(event.target.value)}
                 required
               />
 
               <textarea
-                placeholder="Description"
+                placeholder={profileMoreUi.description}
                 value={profileDescription}
                 onChange={(event) => setProfileDescription(event.target.value)}
               />
@@ -2998,7 +3371,9 @@ function App() {
                   className="primary-button"
                   disabled={profileLoading}
                 >
-                  {profileLoading ? "Creating..." : "Create Profile"}
+                  {profileLoading
+                    ? profileMoreUi.creating
+                    : profileMoreUi.createProfile.replace("+ ", "")}
                 </button>
 
                 <button
@@ -3009,7 +3384,7 @@ function App() {
                     setProfileMessage("");
                   }}
                 >
-                  Cancel
+                  {profileMoreUi.cancel}
                 </button>
               </div>
 
@@ -3023,14 +3398,14 @@ function App() {
         <section className="card">
           <h2>
             {selectedTimelineProfile
-              ? `🕰️ ${selectedTimelineProfile.name}'s Memory Timeline`
+              ? `🕰️ ${selectedTimelineProfile.name}${timelineUi.personTitleSuffix}`
               : timelineProfileId === "unassigned"
-                ? "🕰️ Unassigned Memory Timeline"
-                : "🕰️ Personal Memory Timeline"}
+                ? timelineUi.unassignedTitle
+                : timelineUi.personalTitle}
           </h2>
-          <p>Choose a person to explore only the memories linked to them.</p>
+          <p>{timelineUi.description}</p>
 
-          <label htmlFor="timeline-profile">Show timeline for:</label>
+          <label htmlFor="timeline-profile">{timelineUi.showFor}</label>
           <select
             id="timeline-profile"
             value={timelineProfileId}
@@ -3044,8 +3419,8 @@ function App() {
               borderRadius: "8px",
             }}
           >
-            <option value="">All profiles</option>
-            <option value="unassigned">Unassigned memories</option>
+            <option value="">{timelineUi.allProfiles}</option>
+            <option value="unassigned">{timelineUi.unassignedMemories}</option>
             {profiles.map((profile) => (
               <option key={profile.id} value={String(profile.id)}>
                 {profile.name}
@@ -3056,8 +3431,8 @@ function App() {
           {timelineMemories.length === 0 ? (
             <p>
               {timelineProfileId
-                ? "No memories are linked to this selection yet."
-                : "No memories available yet."}
+                ? timelineUi.noLinkedMemories
+                : timelineUi.noMemories}
             </p>
           ) : (
             <div
@@ -3095,16 +3470,24 @@ function App() {
 
                     <small>
                       {memory.created_at
-                        ? new Date(memory.created_at).toLocaleDateString()
-                        : "Date unavailable"}
+                        ? new Date(memory.created_at).toLocaleDateString(
+                            languageLocales[language] || "en-US",
+                          )
+                        : timelineUi.dateUnavailable}
                     </small>
 
                     <h3>{memory.title}</h3>
                     <p>{memory.content}</p>
 
                     <div className="memory-meta">
-                      <span>{linkedProfile?.name || "Unassigned memory"}</span>
-                      <span>{memory.memory_type || "personal"}</span>
+                      <span>
+                        {linkedProfile?.name || timelineUi.unassignedMemory}
+                      </span>
+                      <span>
+                        {ui[memory.memory_type] ||
+                          memory.memory_type ||
+                          ui.personal}
+                      </span>
                     </div>
                   </article>
                 );
