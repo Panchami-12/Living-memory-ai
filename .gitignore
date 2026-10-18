@@ -123,3 +123,12 @@ backend/storage/*.sqlite3
 backend/storage/uploads/
 backend/storage/memory_images/
 backend/storage/audio/
+# Local voice environment
+.venv-tts/
+
+# Python generated files
+__pycache__/
+*.py[cod]
+
+# Generated voice test audio
+kannada_test.wav
