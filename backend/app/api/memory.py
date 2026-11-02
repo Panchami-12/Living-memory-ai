@@ -5,6 +5,7 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
+
 from faster_whisper import WhisperModel
 from fastapi import (
     APIRouter,
@@ -106,12 +107,20 @@ def get_semantic_results(
         for memory in memories
     ]
 
+
     payload = json.dumps(
         {
-            "model": "nomic-embed-text",
-            "input": [query_text] + memory_texts,
+            "model": "nomic-embed-text-v2-moe",
+            "input": (
+                ["search_query: " + query_text]
+                + [
+                    "search_document: " + text
+                    for text in memory_texts
+                ]
+            ),
         }
     ).encode("utf-8")
+
 
     embedding_request = urllib.request.Request(
         "http://127.0.0.1:11434/api/embed",
@@ -322,12 +331,13 @@ async def chat_with_memories(
         return {"answer": "I don't have any saved memories for you yet."}
 
     # Retrieve memories by meaning within the selected scope.
+
     ranked_memories = get_semantic_results(
         question=data.question,
         user_id=data.user_id,
         db=db,
         profile_id=data.profile_id,
-        limit=5,
+        limit=10,
     )
 
     if not ranked_memories:
@@ -338,15 +348,114 @@ async def chat_with_memories(
             )
         }
 
-    memory_text = "\\n\\n".join(
+    question_text = data.question.casefold()
+    selected_memories = ranked_memories
+
+    father_question_terms = (
+        "father", "dad", "papa", "पापा", "पिता",
+        "ಅಪ್ಪ", "ತಂದೆ", "அப்பா", "தந்தை","അച്ഛ", "അപ്പ",
+    )
+    mother_question_terms = (
+        "mother", "mom", "mum", "माँ", "मम्मी",
+        "ಅಮ್ಮ", "ತಾಯಿ", "அம்மா", "தாய்", "അമ്മ",
+    )
+
+    father_memory_terms = (
+        "father", "dad", "papa", "ಪಪ್ಪ", "ಅಪ್ಪ",
+        "ತಂದೆ", "அப்பா", "தந்தை", "അച്ഛൻ", "അപ്പൻ",
+    )
+    mother_memory_terms = (
+        "mother", "mom", "mum", "ಅಮ್ಮ", "ತಾಯಿ",
+        "அம்மா", "தாய்", "അമ്മ",
+    )
+
+    sweet_question_terms = (
+        "sweet", "dessert", "मिठाई", "ಸಿಹಿ",
+        "ಸಿಹಿತಿಂಡಿ", "இனிப்பு", "மிட்டாய்", "മധുരം",
+    )
+    food_question_terms = (
+        "food", "meal", "dish", "खाना", "भोजन",
+        "ಆಹಾರ", "ಊಟ", "உணவு", "சாப்பாடு",
+        "ഭക്ഷണം", "ആഹാരം",
+    )
+
+    sweet_memory_terms = (
+        "sweet", "dessert", "gulab jamun", "मिठाई",
+        "ಸಿಹಿ", "ಸಿಹಿತಿಂಡಿ", "இனிப்பு", "மிட்டாய்", "മധുരം",
+    )
+    food_memory_terms = (
+        "food", "meal", "dish", "খाना", "भोजन",
+        "ಆಹಾರ", "ಊಟ", "உணவு", "சாப்பாடு", "ഭക്ഷണം", "ആഹാരം",
+    )
+
+    def memory_text_lower(memory):
+        return (
+            f"{memory.get('title') or ''} "
+            f"{memory.get('content') or ''} "
+            f"{memory.get('memory_type') or ''}"
+        ).casefold()
+
+    if any(term in question_text for term in father_question_terms):
+        matches = [
+            memory for memory in selected_memories
+            if any(
+                term in memory_text_lower(memory)
+                for term in father_memory_terms
+            )
+        ]
+        if matches:
+            selected_memories = matches
+
+    elif any(term in question_text for term in mother_question_terms):
+        matches = [
+            memory for memory in selected_memories
+            if any(
+                term in memory_text_lower(memory)
+                for term in mother_memory_terms
+            )
+        ]
+        if matches:
+            selected_memories = matches
+
+    if any(term in question_text for term in sweet_question_terms):
+        matches = [
+            memory for memory in selected_memories
+            if any(
+                term in memory_text_lower(memory)
+                for term in sweet_memory_terms
+            )
+        ]
+        if matches:
+            selected_memories = matches
+
+    elif any(term in question_text for term in food_question_terms):
+        matches = [
+            memory for memory in selected_memories
+            if any(
+                term in memory_text_lower(memory)
+                for term in food_memory_terms
+            )
+            and not any(
+                term in memory_text_lower(memory)
+                for term in sweet_memory_terms
+            )
+        ]
+        if matches:
+            selected_memories = matches
+
+
+
+
+    memory_text = "\n\n".join(
         (
-            f"Title: {memory['title'] or ''}\\n"
-            f"Type: {memory['memory_type'] or ''}\\n"
-            f"Memory: {memory['content'] or ''}\\n"
+            f"Title: {memory['title'] or ''}\n"
+            f"Type: {memory['memory_type'] or ''}\n"
+            f"Memory: {memory['content'] or ''}\n"
             f"Similarity: {memory['similarity']}"
         )
-        for memory in ranked_memories
+        for memory in selected_memories
     )
+
 
     try:
         request_body = await request.json()
@@ -354,29 +463,35 @@ async def chat_with_memories(
     except Exception:
         language = "English"
 
+    language = str(language or "English").strip()
     language_instructions = {
-        "English": "Respond in English.",
-        "Kannada": "Respond in Kannada (ಕನ್ನಡ).",
-        "Hindi": "Respond in Hindi (हिन्दी).",
-        "Tamil": "Respond in Tamil (தமிழ்).",
-        "Malayalam": "Respond in Malayalam (മലയാളം).",
+        "English": "English",
+        "Kannada": "Kannada (ಕನ್ನಡ)",
+        "Hindi": "Hindi (देवनागरी)",
+        "Tamil": "Tamil (தமிழ்)",
+        "Malayalam": "Malayalam (മലയാളം)",
     }
-    language_instruction = language_instructions.get(
-        language, "Respond in English."
+
+    target_language = language_instructions.get(
+        language,
+        "English"
     )
 
     profile_context = ""
+
     if selected_profile is not None:
         profile_context = (
             f"Focus only on memories linked to {selected_profile.name}, "
             f"whose relationship to the user is "
-            f"{selected_profile.relationship_type}.\\n"
+            f"{selected_profile.relationship_type}.\n"
         )
 
     prompt = f"""
-You are Living Memory AI.
+You are Living Memory AI, a multilingual memory assistant.
 
-{profile_context}Answer the user's question using the retrieved memories below.
+MANDATORY OUTPUT LANGUAGE: {target_language}
+
+{profile_context}Answer the user's question using the retrieved memories.
 
 Retrieved memories:
 {memory_text}
@@ -384,24 +499,29 @@ Retrieved memories:
 User question:
 {data.question}
 
-Response language:
-{language_instruction}
 
-Instructions:
-- Answer naturally and clearly.
-- Prioritize memories with higher similarity scores.
-- Use only details supported by the retrieved memories.
-- If the memories do not contain the answer, say you don't know.
-- Do not invent personal facts or events.
-- A similarity score is not proof that a fact is true.
-- Reply only in the selected response language.
-- Keep names and important personal details unchanged.
+Rules:
+1. Identify the exact fact requested, including the person and attribute.
+2. Match the requested attribute exactly. Favourite food, favourite sweet,
+   favourite drink, and favourite dessert are different attributes.
+3. Use the memory that explicitly answers the question, considering its
+   title, type, and content together.
+4. Never substitute a related fact about the same person for the requested
+   fact. A favourite sweet must not answer a question about favourite food.
+5. If the retrieved memories do not contain the exact fact, say that you
+   do not know. Never guess.
+6. Write the entire answer in {target_language}, using its native script.
+7. Translate the meaning of memories when needed; do not copy English
+   sentences into a non-English answer.
+8. Do not reveal your reasoning or provide an English translation.
+9. Keep personal names unchanged.
+10. Return only a short, direct answer.
 """
 
     try:
         from app.services.ai_service import ask_ai
 
-        answer = ask_ai(prompt)
+        answer = ask_ai(prompt, language=language)
         return {"answer": answer}
     except Exception as error:
         print("AI ERROR:", error)
