@@ -2590,7 +2590,7 @@ function App() {
       const response = await apiFetch(`${API}/memories/chat`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json; charset=utf-8",
         },
         body: JSON.stringify({
           user_id: userId,
@@ -2654,7 +2654,7 @@ function App() {
         });
 
         if (!response.ok) {
-          throw new Error("Local Kannada voice generation failed.");
+          throw new Error("Local voice generation failed.");
         }
 
         const audioBlob = await response.blob();
@@ -2672,10 +2672,10 @@ function App() {
         await audio.play();
         return;
       } catch (error) {
-        console.error("Kannada voice error:", error);
+        console.error("AI voice error:", error);
 
         alert(
-          "Could not generate Kannada voice. " +
+          "Could not generate the voice. " +
             "Please check that your local TTS server is running on port 8002.",
         );
         return;

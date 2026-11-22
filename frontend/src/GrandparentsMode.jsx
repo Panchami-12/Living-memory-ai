@@ -571,11 +571,11 @@ function GrandparentsMode({
       setAnswer(aiAnswer);
       setStatus(gt.answerReady);
 
-      // Generate Kannada voice
+      // Generate voice in the selected language
       const voiceResponse = await fetch(`${TTS_API}/tts/speak`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json; charset=utf-8",
         },
         body: JSON.stringify({
           text: aiAnswer,
