@@ -1,0 +1,15 @@
+﻿supabase==2.34.1
+fastapi==0.141.1
+uvicorn==0.52.1
+SQLAlchemy==2.0.51
+python-dotenv==1.2.4
+google-genai==2.34.0
+faster-whisper==1.2.1
+indic-transliteration==2.3.82
+PyJWT==2.15.1
+python-multipart==0.0.32
+pydantic==2.13.4
+pydantic-settings==2.15.0
+numpy==2.4.6
+
+psycopg[binary]>=3.2,<4

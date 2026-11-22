@@ -1,9 +1,9 @@
-
+import os
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+
 from sqlalchemy import text
 
 from app.core.database import (
@@ -13,11 +13,11 @@ from app.core.database import (
 )
 
 from app.models import User, Memory, Profile
-
+from app.models.time_capsule import TimeCapsule
 from app.api.profiles import router as profiles_router
 from app.api.memory import router as memory_router
 from app.api.user import router as user_router
-
+from app.api.time_capsules import router as time_capsules_router
 
 # =========================================================
 # PATHS AND STORAGE
@@ -57,31 +57,28 @@ app = FastAPI(
 # CORS
 # =========================================================
 
+CORS_ALLOWED_ORIGINS = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174",
+    ).split(",")
+    if origin.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-    ],
+    allow_origins=CORS_ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-
 # =========================================================
 # SERVE UPLOADED FILES
 # =========================================================
 
-app.mount(
-    "/uploads",
-    StaticFiles(directory=str(UPLOAD_DIR)),
-    name="uploads",
-)
-
-
+# Public static uploads disabled; private media uses authenticated memory endpoints.
 # =========================================================
 # ROUTERS
 # =========================================================
@@ -89,7 +86,7 @@ app.mount(
 app.include_router(memory_router)
 app.include_router(user_router)
 app.include_router(profiles_router)
-
+app.include_router(time_capsules_router)
 
 # =========================================================
 # ROOT

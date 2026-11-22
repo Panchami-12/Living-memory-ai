@@ -132,3 +132,10 @@ __pycache__/
 
 # Generated voice test audio
 kannada_test.wav
+# Deployment safety: local backups and temporary files
+*.bak
+*.before-*.bak
+*.broken
+
+# Local deployment audit
+living-memory-ai-deployment-audit.txt

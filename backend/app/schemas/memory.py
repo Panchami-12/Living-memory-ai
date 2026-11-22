@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # =========================================================
@@ -13,6 +13,7 @@ class MemoryCreate(BaseModel):
     memory_type: str = "personal"
     user_id: int = 1
     profile_id: int | None = None
+    hidden_from_profile_ids: list[int] = Field(default_factory=list)
 
 
 # =========================================================
@@ -25,6 +26,7 @@ class MemoryUpdate(BaseModel):
     memory_type: str | None = None
     user_id: int | None = None
     profile_id: int | None = None
+    hidden_from_profile_ids: list[int] | None = None
 
 
 # =========================================================
@@ -39,10 +41,9 @@ class MemoryResponse(BaseModel):
     user_id: int
     profile_id: int | None = None
     created_at: datetime | None = None
-
-    # Photo attached to the memory
     image_url: str | None = None
     audio_url: str | None = None
+    hidden_from_profile_ids: list[int] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
@@ -55,4 +56,7 @@ class MemoryResponse(BaseModel):
 class ChatRequest(BaseModel):
     question: str
     user_id: int = 1
+    # profile_id identifies whose memories the question is about.
     profile_id: int | None = None
+    # viewer_profile_id identifies who is asking and whose privacy applies.
+    viewer_profile_id: int | None = None

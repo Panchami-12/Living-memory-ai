@@ -1,7 +1,11 @@
+﻿
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.security import authorize_request_user
 from app.models.profile import Profile
 from app.models.memory import Memory
 from app.models.user import User
@@ -14,8 +18,40 @@ from app.schemas.profile import (
 
 router = APIRouter(
     prefix="/profiles",
-    tags=["Profiles"]
+    tags=["Profiles"],
+    dependencies=[Depends(authorize_request_user)],
 )
+
+
+# =========================================================
+# STORAGE DIRECTORIES
+# =========================================================
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+IMAGE_DIR = BASE_DIR / "storage" / "memory_images"
+AUDIO_DIR = BASE_DIR / "storage" / "audio"
+
+
+def remove_memory_files(memory_id: int) -> None:
+    """Remove image and audio files belonging to a memory."""
+
+    for extension in (".jpg", ".png", ".webp", ".gif"):
+        path = IMAGE_DIR / f"memory_{memory_id}{extension}"
+
+        if path.is_file():
+            try:
+                path.unlink(missing_ok=True)
+            except OSError as error:
+                print(f"Could not remove image file {path}: {error}")
+
+    for extension in (".webm", ".wav", ".mp3", ".m4a", ".ogg"):
+        path = AUDIO_DIR / f"memory_{memory_id}{extension}"
+
+        if path.is_file():
+            try:
+                path.unlink(missing_ok=True)
+            except OSError as error:
+                print(f"Could not remove audio file {path}: {error}")
 
 
 # =========================================================
@@ -155,13 +191,12 @@ def update_profile(
 # DELETE PROFILE
 # =========================================================
 
-@router.delete(
-    "/{profile_id}"
-)
+@router.delete("/{profile_id}")
 def delete_profile(
     profile_id: int,
     user_id: int,
-    db: Session = Depends(get_db)
+    delete_memories: bool = False,
+    db: Session = Depends(get_db),
 ):
 
     profile = db.query(Profile).filter(
@@ -175,12 +210,48 @@ def delete_profile(
             detail="Profile not found"
         )
 
+    # Find all memories linked to this profile.
+    linked_memories = db.query(Memory).filter(
+        Memory.profile_id == profile_id,
+        Memory.user_id == user_id
+    ).all()
+
+    memory_ids = [
+        memory.id for memory in linked_memories
+    ]
+
+    if delete_memories:
+
+        # Option 2: Delete profile and linked memories.
+        for memory in linked_memories:
+            db.delete(memory)
+
+    else:
+
+        # Option 1: Keep memories as general memories.
+        for memory in linked_memories:
+            memory.profile_id = None
+
+    # Delete the profile.
     db.delete(profile)
+
     db.commit()
 
+    # Remove attached files only when memories are deleted.
+    if delete_memories:
+        for memory_id in memory_ids:
+            remove_memory_files(memory_id)
+
     return {
-        "message": "Profile deleted successfully"
+        "message": "Profile deleted successfully",
+        "memories_deleted": (
+            len(memory_ids) if delete_memories else 0
+        ),
+        "memories_unassigned": (
+            0 if delete_memories else len(memory_ids)
+        ),
     }
+
 
 # =========================================================
 # GENERATE AI LIFE STORY
@@ -192,7 +263,8 @@ def generate_life_story(
     user_id: int,
     db: Session = Depends(get_db),
 ):
-    # Find the profile belonging to this user
+
+    # Find the profile belonging to this user.
     profile = (
         db.query(Profile)
         .filter(
@@ -208,7 +280,7 @@ def generate_life_story(
             detail="Profile not found",
         )
 
-    # Get memories linked to this person
+    # Get memories linked to this person.
     memories = (
         db.query(Memory)
         .filter(
@@ -235,7 +307,8 @@ def generate_life_story(
             f"Title: {memory.title}\n"
             f"Type: {memory.memory_type}\n"
             f"Memory: {memory.content}\n"
-            f"Record saved on: {memory.created_at or 'Date unavailable'}"
+            f"Record saved on: "
+            f"{memory.created_at or 'Date unavailable'}"
             for memory in memories
         ]
     )

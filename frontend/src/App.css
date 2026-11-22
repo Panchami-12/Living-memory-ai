@@ -2071,3 +2071,97 @@ footer p {
   font-size: 14px;
   font-weight: 800;
 }
+/* =================================
+   MEMORY PRIVACY - CLEAN UI
+================================= */
+
+.memory-privacy-section {
+  margin: 22px 0;
+  padding: 20px;
+  background: #f7f5ff;
+  border: 1px solid #e5defb;
+  border-radius: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.privacy-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.privacy-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #ebe5ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 21px;
+  flex-shrink: 0;
+}
+
+.privacy-heading h3 {
+  margin: 0 0 5px;
+  font-size: 16px;
+  color: #292044;
+}
+
+.privacy-heading p {
+  margin: 0;
+  color: #77718b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.privacy-profile-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.memory-privacy-section .privacy-profile-option {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  min-height: 46px;
+  padding: 11px 13px;
+  margin: 0;
+  width: auto;
+  box-sizing: border-box;
+  border: 1px solid #e5defb;
+  border-radius: 11px;
+  background: #ffffff;
+  color: #39304f;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.memory-privacy-section .privacy-profile-option:hover {
+  border-color: #8c6af0;
+  background: #f1edff;
+}
+
+.memory-privacy-section .privacy-profile-option input[type="checkbox"] {
+  width: 18px !important;
+  min-width: 18px;
+  height: 18px;
+  margin: 0 !important;
+  flex: 0 0 18px;
+  accent-color: #7044e8;
+  cursor: pointer;
+}
+
+@media (max-width: 550px) {
+  .privacy-profile-list {
+    grid-template-columns: 1fr;
+  }
+}

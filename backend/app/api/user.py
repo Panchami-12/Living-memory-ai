@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 import hashlib
 import secrets
-
+from app.core.security import create_access_token
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.user import SignupRequest, LoginRequest
@@ -36,10 +36,11 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, stored_password: str) -> bool:
     """
-    Verify a password against the stored hash.
+    Verify PBKDF2 passwords and legacy SHA-256 hashes.
+    Plain-text passwords are not accepted.
     """
 
-    # New hashed passwords
+    # Current PBKDF2 password format
     if "$" in stored_password:
         try:
             salt, saved_hash = stored_password.split("$", 1)
@@ -59,12 +60,18 @@ def verify_password(password: str, stored_password: str) -> bool:
         except Exception:
             return False
 
-    # Allows old plain-text passwords created during testing
-    return secrets.compare_digest(
-        password,
-        stored_password
-    )
+    # Legacy SHA-256 password format
+    if len(stored_password) == 64:
+        legacy_hash = hashlib.sha256(
+            password.encode("utf-8")
+        ).hexdigest()
 
+        return secrets.compare_digest(
+            legacy_hash,
+            stored_password.lower()
+        )
+
+    return False
 
 # ============================================================
 # SIGNUP
@@ -139,9 +146,24 @@ def login(
             detail="Invalid email or password"
         )
 
+    # Upgrade legacy SHA-256 hashes to PBKDF2
+    if (
+        "$" not in user.password
+        and len(user.password) == 64
+        and all(c in "0123456789abcdefABCDEF" for c in user.password)
+    ):
+        user.password = hash_password(data.password)
+        db.commit()
+
+    # Generate authentication token
+    access_token = create_access_token(user.id)
+
+    # Return login details and token
     return {
         "message": "Login successful",
         "user_id": user.id,
         "username": user.name,
-        "email": user.email
+        "email": user.email,
+        "access_token": access_token,
+        "token_type": "bearer"
     }

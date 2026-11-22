@@ -1,9 +1,13 @@
+import { apiFetch } from "./apiFetch";
+import { AuthenticatedImage, AuthenticatedAudio } from "./AuthenticatedMedia";
 import { useCallback, useEffect, useState } from "react";
 import "./App.css";
+import "./DashboardLayout.css";
+import TimeCapsules from "./TimeCapsules";
 import VoiceRecorder from "./VoiceRecorder";
-
-const API = "http://127.0.0.1:8001";
-
+import GrandparentsMode from "./GrandparentsMode";
+const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8001";
+const TTS_API = import.meta.env.VITE_TTS_API_URL || "http://127.0.0.1:8002";
 function App() {
   // =====================================================
   // AUTH
@@ -12,7 +16,7 @@ function App() {
   const [loggedIn, setLoggedIn] = useState(
     localStorage.getItem("loggedIn") === "true",
   );
-
+  const [hiddenFromProfileIds, setHiddenFromProfileIds] = useState([]);
   const [showSignup, setShowSignup] = useState(false);
 
   const [authEmail, setAuthEmail] = useState(
@@ -22,7 +26,6 @@ function App() {
   const [authUsername, setAuthUsername] = useState(
     localStorage.getItem("username") || "",
   );
-
   const [authPassword, setAuthPassword] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
@@ -74,6 +77,7 @@ function App() {
   const [editContent, setEditContent] = useState("");
   const [editMemoryType, setEditMemoryType] = useState("personal");
   const [editProfileId, setEditProfileId] = useState("");
+  const [editHiddenFromProfileIds, setEditHiddenFromProfileIds] = useState([]);
   const [editLoading, setEditLoading] = useState(false);
 
   // =====================================================
@@ -92,9 +96,6 @@ function App() {
   const [activeProfileFilter, setActiveProfileFilter] = useState(null);
   const [timelineProfileId, setTimelineProfileId] = useState("");
   const [showProfileForm, setShowProfileForm] = useState(false);
-  const [identitySummaries, setIdentitySummaries] = useState({});
-  const [identityLoadingId, setIdentityLoadingId] = useState(null);
-  const [identityErrors, setIdentityErrors] = useState({});
   const [lifeStories, setLifeStories] = useState({});
   const [lifeStoryLoadingId, setLifeStoryLoadingId] = useState(null);
   const [lifeStoryErrors, setLifeStoryErrors] = useState({});
@@ -103,7 +104,11 @@ function App() {
   const [profileDescription, setProfileDescription] = useState("");
   const [profileMessage, setProfileMessage] = useState("");
   const [profileLoading, setProfileLoading] = useState(false);
-
+  const [profileToDelete, setProfileToDelete] = useState(null);
+  const [deletingProfile, setDeletingProfile] = useState(false);
+  const [profileDeleteError, setProfileDeleteError] = useState("");
+  const [activePage, setActivePage] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   // =====================================================
   // LANGUAGE
   // =====================================================
@@ -146,6 +151,10 @@ function App() {
 
   const translations = {
     English: {
+      mainNavigation: "Main navigation",
+      hideFrom: "Hide from",
+      myAccount: "My account",
+      currentAccountFallback: "Current account",
       home: "Home",
       features: "Features",
       memories: "Memories",
@@ -298,6 +307,10 @@ function App() {
     },
 
     Kannada: {
+      mainNavigation: "ಮುಖ್ಯ ನ್ಯಾವಿಗೇಶನ್",
+      hideFrom: "ಇವರಿಂದ ಮರೆಮಾಡಿ",
+      myAccount: "ನನ್ನ ಖಾತೆ",
+      currentAccountFallback: "ಪ್ರಸ್ತುತ ಖಾತೆ",
       home: "ಮುಖಪುಟ",
       features: "ವೈಶಿಷ್ಟ್ಯಗಳು",
       memories: "ನೆನಪುಗಳು",
@@ -452,6 +465,10 @@ function App() {
     },
 
     Hindi: {
+      mainNavigation: "मुख्य नेविगेशन",
+      hideFrom: "इनसे छिपाएं",
+      myAccount: "मेरा खाता",
+      currentAccountFallback: "वर्तमान खाता",
       home: "होम",
       features: "फीचर्स",
       memories: "यादें",
@@ -604,6 +621,10 @@ function App() {
     },
 
     Tamil: {
+      mainNavigation: "முக்கிய வழிசெலுத்தல்",
+      hideFrom: "இவர்களிடமிருந்து மறைக்கவும்",
+      myAccount: "எனது கணக்கு",
+      currentAccountFallback: "தற்போதைய கணக்கு",
       home: "முகப்பு",
       features: "அம்சங்கள்",
       memories: "நினைவுகள்",
@@ -762,6 +783,10 @@ function App() {
     },
 
     Malayalam: {
+      mainNavigation: "പ്രധാന നാവിഗേഷൻ",
+      hideFrom: "ഇവരിൽ നിന്ന് മറയ്ക്കുക",
+      myAccount: "എന്റെ അക്കൗണ്ട്",
+      currentAccountFallback: "നിലവിലെ അക്കൗണ്ട്",
       home: "ഹോം",
       features: "സവിശേഷതകൾ",
       memories: "ഓർമ്മകൾ",
@@ -923,6 +948,645 @@ function App() {
   };
 
   const ui = translations[language] || translations.English;
+
+  // Text used by the signed-in workspace pages. Keep this separate from
+  // the landing-page translations so every workspace section changes together.
+  const workspaceTextTranslations = {
+    English: {
+      brandTagline: "Your story, preserved",
+      workspace: "WORKSPACE",
+      breadcrumb: "LIVING MEMORY AI / WORKSPACE",
+      closeNavigation: "Close navigation",
+      openNavigation: "Open navigation",
+      selectLanguage: "Select language",
+      sidebarNote:
+        "Your memories are part of your story. Keep adding the moments that matter.",
+      grandparentsMode: "Grandparents Mode",
+      personalMemorySpace: "YOUR PERSONAL MEMORY SPACE",
+      welcomeBack: "Welcome back",
+      welcomeDescription:
+        "Your important moments, people and stories — all in one place.",
+      addMemory: "+ Add a memory",
+      totalMemories: "Total memories",
+      openMemoryLibrary: "Open memory library →",
+      customProfiles: "Custom profiles",
+      explorePeople: "Explore your people →",
+      photoMemories: "Photo memories",
+      openPhotoGallery: "Open photo gallery →",
+      voiceMemories: "Voice memories",
+      listenRecordings: "Listen to recordings →",
+      yourCollection: "YOUR COLLECTION",
+      recentMemories: "Recent memories",
+      viewAll: "View all →",
+      storyStarts: "Your story starts here",
+      saveFirstMemory:
+        "Save your first special memory to see it on your dashboard.",
+      createFirstMemory: "Create your first memory",
+      jumpBackIn: "JUMP BACK IN",
+      quickAccess: "Quick access",
+      askYourAI: "Ask your AI",
+      talkToSavedMemories: "Talk to your saved memories",
+      peopleProfiles: "People profiles",
+      exploreMemoriesByPerson: "Explore memories by person",
+      memoryTimeline: "Memory timeline",
+      revisitByDate: "Revisit moments by date",
+      preferences: "PREFERENCES",
+      preferencesTitle: "Preferences",
+      manageLanguageAccount: "Manage language and account",
+      chatWith: "Chat with memories of:",
+      allMyMemories: "All my memories",
+      selectedProfile: "Selected Profile",
+      aiSearchOnlyProfile:
+        "🔒 The AI will search only memories linked to this profile.",
+      aiSearchAll: "💭 The AI can search across all your saved memories.",
+      listen: "🔊 Listen",
+      linkedProfile: "Linked Profile:",
+      noProfileAssigned: "No profile assigned",
+      hideMemoryFrom: "🔒 Hide this memory from",
+      privacyDescription:
+        "Select family profiles that should not be able to view this memory.",
+      createProfileForPrivacy:
+        "Create a relationship profile to set memory privacy.",
+      whoseMemory: "Whose memory is this?",
+      generalMemory: "General memory — no profile",
+      showAllMemories: "Show All Memories",
+      filterMemories: "Filter memories",
+      filterDescription: "Find moments by category or date range.",
+      clearAll: "↺ Clear all",
+      profile: "Profile",
+      allProfiles: "All profiles",
+      unassignedMemories: "Unassigned memories",
+      category: "Category",
+      allCategories: "All categories",
+      fromDate: "From date",
+      toDate: "To date",
+      showing: "Showing",
+      memory: "memory",
+      memories: "memories",
+      noMatchingMemories: "No matching memories",
+      changeFilters: "Try changing the category or date filters.",
+      linkedProfileFallback: "Linked profile",
+      recordedMoments: "YOUR RECORDED MOMENTS",
+      voiceMemoriesTitle: "Voice memories",
+      listenSavedRecordings:
+        "Listen to the voices and recordings you have saved with your memories.",
+      recordMemory: "+ Record a memory",
+      noVoiceMemories: "No voice memories yet",
+      useVoiceRecorder:
+        "Use the voice recorder in Add Memory to save your first recording.",
+      goToAddMemory: "Go to Add Memory",
+      viewMemory: "View memory →",
+      visualStory: "YOUR VISUAL STORY",
+      photoMemoriesTitle: "Photo memories",
+      browsePhotos: "Browse the photographs attached to your saved memories.",
+      addPhoto: "+ Add a photo",
+      noPhotoMemories: "No photo memories yet",
+      addPhotoToGallery:
+        "Add a photo when you create a memory to build your gallery.",
+      savedMemory: "Saved memory",
+      settings: "Settings",
+      settingsDescription:
+        "Manage your display language and review your account details.",
+      displayLanguage: "Display language",
+      chooseLanguage: "Choose the language used throughout Living Memory AI.",
+      signedInAccount: "Signed-in account",
+      currentAccount: "Your current account for this memory space.",
+      accountId: "Account ID",
+      accountIdDescription: "Used by this app to associate saved memories.",
+      backToDashboard: "Back to dashboard",
+      imageFormatError: "Please select a JPG, PNG, WEBP or GIF image.",
+      recordMemoryButton: "Record Memory",
+      transcriptAdded: "Transcript added",
+      imageUploadError: "Could not upload image.",
+      profileNameRequired: "Please enter a profile name.",
+      relationshipRequired: "Please enter the relationship.",
+      loginRequired: "Please login first.",
+      profileLoadError: "Could not load profiles.",
+    },
+    Kannada: {
+      brandTagline: "ನಿಮ್ಮ ಕಥೆ, ಸದಾ ನೆನಪಿನಲ್ಲಿ",
+      workspace: "ಕಾರ್ಯಸ್ಥಳ",
+      breadcrumb: "ಲಿವಿಂಗ್ ಮೆಮೊರಿ AI / ಕಾರ್ಯಸ್ಥಳ",
+      closeNavigation: "ನ್ಯಾವಿಗೇಶನ್ ಮುಚ್ಚಿ",
+      openNavigation: "ನ್ಯಾವಿಗೇಶನ್ ತೆರೆಯಿರಿ",
+      selectLanguage: "ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ",
+      sidebarNote:
+        "ನಿಮ್ಮ ನೆನಪುಗಳು ನಿಮ್ಮ ಕಥೆಯ ಭಾಗ. ಮುಖ್ಯವಾದ ಕ್ಷಣಗಳನ್ನು ಸೇರಿಸುತ್ತಿರಿ.",
+      grandparentsMode: "ಅಜ್ಜ-ಅಜ್ಜಿ ಮೋಡ್",
+      personalMemorySpace: "ನಿಮ್ಮ ವೈಯಕ್ತಿಕ ನೆನಪುಗಳ ಸ್ಥಳ",
+      welcomeBack: "ಮತ್ತೆ ಸ್ವಾಗತ",
+      welcomeDescription:
+        "ನಿಮ್ಮ ಪ್ರಮುಖ ಕ್ಷಣಗಳು, ಜನರು ಮತ್ತು ಕಥೆಗಳು — ಎಲ್ಲವೂ ಒಂದೇ ಸ್ಥಳದಲ್ಲಿ.",
+      addMemory: "+ ನೆನಪು ಸೇರಿಸಿ",
+      totalMemories: "ಒಟ್ಟು ನೆನಪುಗಳು",
+      openMemoryLibrary: "ನೆನಪುಗಳ ಸಂಗ್ರಹ ತೆರೆಯಿರಿ →",
+      customProfiles: "ವೈಯಕ್ತಿಕ ಪ್ರೊಫೈಲ್‌ಗಳು",
+      explorePeople: "ನಿಮ್ಮ ಜನರನ್ನು ನೋಡಿ →",
+      photoMemories: "ಫೋಟೋ ನೆನಪುಗಳು",
+      openPhotoGallery: "ಫೋಟೋ ಗ್ಯಾಲರಿ ತೆರೆಯಿರಿ →",
+      voiceMemories: "ಧ್ವನಿ ನೆನಪುಗಳು",
+      listenRecordings: "ಧ್ವನಿ ದಾಖಲೆಗಳನ್ನು ಕೇಳಿ →",
+      yourCollection: "ನಿಮ್ಮ ಸಂಗ್ರಹ",
+      recentMemories: "ಇತ್ತೀಚಿನ ನೆನಪುಗಳು",
+      viewAll: "ಎಲ್ಲವನ್ನೂ ನೋಡಿ →",
+      storyStarts: "ನಿಮ್ಮ ಕಥೆ ಇಲ್ಲಿ ಆರಂಭವಾಗುತ್ತದೆ",
+      saveFirstMemory:
+        "ನಿಮ್ಮ ಮೊದಲ ವಿಶೇಷ ನೆನಪನ್ನು ಉಳಿಸಿ; ಅದು ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ನಲ್ಲಿ ಕಾಣುತ್ತದೆ.",
+      createFirstMemory: "ನಿಮ್ಮ ಮೊದಲ ನೆನಪನ್ನು ರಚಿಸಿ",
+      jumpBackIn: "ಮತ್ತೆ ಮುಂದುವರಿಯಿರಿ",
+      quickAccess: "ತ್ವರಿತ ಪ್ರವೇಶ",
+      askYourAI: "ನಿಮ್ಮ AI ಅನ್ನು ಕೇಳಿ",
+      talkToSavedMemories: "ಉಳಿಸಿದ ನೆನಪುಗಳೊಂದಿಗೆ ಮಾತನಾಡಿ",
+      peopleProfiles: "ಜನರ ಪ್ರೊಫೈಲ್‌ಗಳು",
+      exploreMemoriesByPerson: "ವ್ಯಕ್ತಿಯ ಪ್ರಕಾರ ನೆನಪುಗಳನ್ನು ನೋಡಿ",
+      memoryTimeline: "ನೆನಪುಗಳ ಕಾಲರೇಖೆ",
+      revisitByDate: "ದಿನಾಂಕದ ಪ್ರಕಾರ ಕ್ಷಣಗಳನ್ನು ಮತ್ತೆ ನೋಡಿ",
+      preferences: "ಆದ್ಯತೆಗಳು",
+      preferencesTitle: "ಆದ್ಯತೆಗಳು",
+      manageLanguageAccount: "ಭಾಷೆ ಮತ್ತು ಖಾತೆಯನ್ನು ನಿರ್ವಹಿಸಿ",
+      chatWith: "ಯಾರ ನೆನಪುಗಳೊಂದಿಗೆ ಮಾತನಾಡಬೇಕು:",
+      allMyMemories: "ನನ್ನ ಎಲ್ಲಾ ನೆನಪುಗಳು",
+      selectedProfile: "ಆಯ್ಕೆ ಮಾಡಿದ ಪ್ರೊಫೈಲ್",
+      aiSearchOnlyProfile:
+        "🔒 AI ಈ ಪ್ರೊಫೈಲ್‌ಗೆ ಸಂಬಂಧಿಸಿದ ನೆನಪುಗಳನ್ನು ಮಾತ್ರ ಹುಡುಕುತ್ತದೆ.",
+      aiSearchAll: "💭 AI ನೀವು ಉಳಿಸಿದ ಎಲ್ಲಾ ನೆನಪುಗಳಲ್ಲಿ ಹುಡುಕಬಹುದು.",
+      listen: "🔊 ಕೇಳಿ",
+      linkedProfile: "ಸಂಬಂಧಿತ ಪ್ರೊಫೈಲ್:",
+      noProfileAssigned: "ಯಾವುದೇ ಪ್ರೊಫೈಲ್ ಆಯ್ಕೆಮಾಡಿಲ್ಲ",
+      hideMemoryFrom: "🔒 ಈ ನೆನಪನ್ನು ಇವರಿಂದ ಮರೆಮಾಡಿ",
+      privacyDescription:
+        "ಈ ನೆನಪನ್ನು ನೋಡಬಾರದ ಕುಟುಂಬದ ಪ್ರೊಫೈಲ್‌ಗಳನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+      createProfileForPrivacy: "ನೆನಪಿನ ಗೌಪ್ಯತೆ ಹೊಂದಿಸಲು ಸಂಬಂಧದ ಪ್ರೊಫೈಲ್ ರಚಿಸಿ.",
+      whoseMemory: "ಇದು ಯಾರ ನೆನಪು?",
+      generalMemory: "ಸಾಮಾನ್ಯ ನೆನಪು — ಪ್ರೊಫೈಲ್ ಇಲ್ಲ",
+      showAllMemories: "ಎಲ್ಲಾ ನೆನಪುಗಳನ್ನು ತೋರಿಸಿ",
+      filterMemories: "ನೆನಪುಗಳನ್ನು ಫಿಲ್ಟರ್ ಮಾಡಿ",
+      filterDescription: "ವರ್ಗ ಅಥವಾ ದಿನಾಂಕದ ಅವಧಿಯ ಮೂಲಕ ಕ್ಷಣಗಳನ್ನು ಹುಡುಕಿ.",
+      clearAll: "↺ ಎಲ್ಲವನ್ನೂ ತೆರವುಗೊಳಿಸಿ",
+      profile: "ಪ್ರೊಫೈಲ್",
+      allProfiles: "ಎಲ್ಲಾ ಪ್ರೊಫೈಲ್‌ಗಳು",
+      unassignedMemories: "ನಿಗದಿಪಡಿಸದ ನೆನಪುಗಳು",
+      category: "ವರ್ಗ",
+      allCategories: "ಎಲ್ಲಾ ವರ್ಗಗಳು",
+      fromDate: "ಆರಂಭ ದಿನಾಂಕ",
+      toDate: "ಅಂತಿಮ ದಿನಾಂಕ",
+      showing: "ತೋರಿಸಲಾಗುತ್ತಿದೆ",
+      memory: "ನೆನಪು",
+      memories: "ನೆನಪುಗಳು",
+      noMatchingMemories: "ಹೊಂದಾಣಿಕೆಯ ನೆನಪುಗಳಿಲ್ಲ",
+      changeFilters: "ವರ್ಗ ಅಥವಾ ದಿನಾಂಕದ ಫಿಲ್ಟರ್‌ಗಳನ್ನು ಬದಲಾಯಿಸಿ ನೋಡಿ.",
+      linkedProfileFallback: "ಸಂಬಂಧಿತ ಪ್ರೊಫೈಲ್",
+      recordedMoments: "ನೀವು ದಾಖಲಿಸಿದ ಕ್ಷಣಗಳು",
+      voiceMemoriesTitle: "ಧ್ವನಿ ನೆನಪುಗಳು",
+      listenSavedRecordings:
+        "ನಿಮ್ಮ ನೆನಪುಗಳೊಂದಿಗೆ ಉಳಿಸಿದ ಧ್ವನಿಗಳು ಮತ್ತು ದಾಖಲೆಗಳನ್ನು ಕೇಳಿ.",
+      recordMemory: "+ ನೆನಪನ್ನು ದಾಖಲಿಸಿ",
+      noVoiceMemories: "ಇನ್ನೂ ಧ್ವನಿ ನೆನಪುಗಳಿಲ್ಲ",
+      useVoiceRecorder:
+        "ಮೊದಲ ಧ್ವನಿ ದಾಖಲೆಯನ್ನು ಉಳಿಸಲು ನೆನಪು ಸೇರಿಸುವ ವಿಭಾಗದ ರೆಕಾರ್ಡರ್ ಬಳಸಿ.",
+      goToAddMemory: "ನೆನಪು ಸೇರಿಸಲು ಹೋಗಿ",
+      viewMemory: "ನೆನಪನ್ನು ನೋಡಿ →",
+      visualStory: "ನಿಮ್ಮ ಚಿತ್ರಗಳ ಕಥೆ",
+      photoMemoriesTitle: "ಫೋಟೋ ನೆನಪುಗಳು",
+      browsePhotos: "ನೀವು ಉಳಿಸಿದ ನೆನಪುಗಳಿಗೆ ಸೇರಿಸಿದ ಫೋಟೋಗಳನ್ನು ನೋಡಿ.",
+      addPhoto: "+ ಫೋಟೋ ಸೇರಿಸಿ",
+      noPhotoMemories: "ಇನ್ನೂ ಫೋಟೋ ನೆನಪುಗಳಿಲ್ಲ",
+      addPhotoToGallery: "ಗ್ಯಾಲರಿ ನಿರ್ಮಿಸಲು ನೆನಪು ರಚಿಸುವಾಗ ಫೋಟೋ ಸೇರಿಸಿ.",
+      savedMemory: "ಉಳಿಸಿದ ನೆನಪು",
+      settings: "ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
+      settingsDescription:
+        "ಪ್ರದರ್ಶನ ಭಾಷೆಯನ್ನು ನಿರ್ವಹಿಸಿ ಮತ್ತು ಖಾತೆ ವಿವರಗಳನ್ನು ಪರಿಶೀಲಿಸಿ.",
+      displayLanguage: "ಪ್ರದರ್ಶನ ಭಾಷೆ",
+      chooseLanguage: "ಲಿವಿಂಗ್ ಮೆಮೊರಿ AI ಯಲ್ಲಿ ಬಳಸುವ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+      signedInAccount: "ಲಾಗಿನ್ ಮಾಡಿದ ಖಾತೆ",
+      currentAccount: "ಈ ನೆನಪುಗಳ ಸ್ಥಳಕ್ಕೆ ಬಳಸುತ್ತಿರುವ ನಿಮ್ಮ ಖಾತೆ.",
+      accountId: "ಖಾತೆ ID",
+      accountIdDescription:
+        "ಉಳಿಸಿದ ನೆನಪುಗಳನ್ನು ನಿಮ್ಮ ಖಾತೆಗೆ ಸಂಪರ್ಕಿಸಲು ಬಳಸಲಾಗುತ್ತದೆ.",
+      backToDashboard: "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್‌ಗೆ ಹಿಂತಿರುಗಿ",
+      imageFormatError: "JPG, PNG, WEBP ಅಥವಾ GIF ಚಿತ್ರವನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+      recordMemoryButton: "ನೆನಪನ್ನು ದಾಖಲಿಸಿ",
+      transcriptAdded: "ಪಠ್ಯ ಸೇರಿಸಲಾಗಿದೆ",
+      imageUploadError: "ಚಿತ್ರವನ್ನು ಅಪ್‌ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+      profileNameRequired: "ಪ್ರೊಫೈಲ್ ಹೆಸರನ್ನು ನಮೂದಿಸಿ.",
+      relationshipRequired: "ಸಂಬಂಧವನ್ನು ನಮೂದಿಸಿ.",
+      loginRequired: "ಮೊದಲು ಲಾಗಿನ್ ಮಾಡಿ.",
+      profileLoadError: "ಪ್ರೊಫೈಲ್‌ಗಳನ್ನು ಲೋಡ್ ಮಾಡಲು ಸಾಧ್ಯವಾಗಲಿಲ್ಲ.",
+    },
+    Hindi: {
+      brandTagline: "आपकी कहानी, सहेजी हुई",
+      workspace: "कार्यस्थान",
+      breadcrumb: "लिविंग मेमोरी AI / कार्यस्थान",
+      closeNavigation: "नेविगेशन बंद करें",
+      openNavigation: "नेविगेशन खोलें",
+      selectLanguage: "भाषा चुनें",
+      sidebarNote:
+        "आपकी यादें आपकी कहानी का हिस्सा हैं। खास पलों को जोड़ते रहें।",
+      grandparentsMode: "दादा-दादी मोड",
+      personalMemorySpace: "आपकी निजी यादों की जगह",
+      welcomeBack: "वापसी पर स्वागत है",
+      welcomeDescription: "आपके खास पल, लोग और कहानियां — सब एक ही जगह।",
+      addMemory: "+ याद जोड़ें",
+      totalMemories: "कुल यादें",
+      openMemoryLibrary: "यादों की लाइब्रेरी खोलें →",
+      customProfiles: "कस्टम प्रोफ़ाइल",
+      explorePeople: "अपने लोगों को देखें →",
+      photoMemories: "फोटो यादें",
+      openPhotoGallery: "फोटो गैलरी खोलें →",
+      voiceMemories: "वॉइस यादें",
+      listenRecordings: "रिकॉर्डिंग सुनें →",
+      yourCollection: "आपका संग्रह",
+      recentMemories: "हाल की यादें",
+      viewAll: "सभी देखें →",
+      storyStarts: "आपकी कहानी यहां शुरू होती है",
+      saveFirstMemory: "अपनी पहली खास याद सेव करें, वह डैशबोर्ड पर दिखाई देगी।",
+      createFirstMemory: "अपनी पहली याद बनाएं",
+      jumpBackIn: "फिर से शुरू करें",
+      quickAccess: "त्वरित पहुंच",
+      askYourAI: "अपने AI से पूछें",
+      talkToSavedMemories: "अपनी सेव की गई यादों से बात करें",
+      peopleProfiles: "लोगों की प्रोफ़ाइल",
+      exploreMemoriesByPerson: "व्यक्ति के अनुसार यादें देखें",
+      memoryTimeline: "यादों की समयरेखा",
+      revisitByDate: "तारीख के अनुसार पल फिर देखें",
+      preferences: "प्राथमिकताएं",
+      preferencesTitle: "प्राथमिकताएं",
+      manageLanguageAccount: "भाषा और खाता प्रबंधित करें",
+      chatWith: "किसकी यादों से बात करें:",
+      allMyMemories: "मेरी सभी यादें",
+      selectedProfile: "चुनी गई प्रोफ़ाइल",
+      aiSearchOnlyProfile: "🔒 AI केवल इस प्रोफ़ाइल से जुड़ी यादें खोजेगा।",
+      aiSearchAll: "💭 AI आपकी सभी सेव की गई यादों में खोज सकता है।",
+      listen: "🔊 सुनें",
+      linkedProfile: "जुड़ी हुई प्रोफ़ाइल:",
+      noProfileAssigned: "कोई प्रोफ़ाइल नहीं चुनी गई",
+      hideMemoryFrom: "🔒 यह याद इनसे छिपाएं",
+      privacyDescription:
+        "उन परिवार प्रोफ़ाइलों को चुनें जिन्हें यह याद नहीं दिखनी चाहिए।",
+      createProfileForPrivacy:
+        "याद की गोपनीयता तय करने के लिए संबंध प्रोफ़ाइल बनाएं।",
+      whoseMemory: "यह किसकी याद है?",
+      generalMemory: "सामान्य याद — कोई प्रोफ़ाइल नहीं",
+      showAllMemories: "सभी यादें दिखाएं",
+      filterMemories: "यादें फ़िल्टर करें",
+      filterDescription: "श्रेणी या तारीख के अनुसार पल खोजें।",
+      clearAll: "↺ सब साफ़ करें",
+      profile: "प्रोफ़ाइल",
+      allProfiles: "सभी प्रोफ़ाइलें",
+      unassignedMemories: "बिना प्रोफ़ाइल की यादें",
+      category: "श्रेणी",
+      allCategories: "सभी श्रेणियां",
+      fromDate: "शुरू तारीख",
+      toDate: "अंतिम तारीख",
+      showing: "दिखाई जा रही हैं",
+      memory: "याद",
+      memories: "यादें",
+      noMatchingMemories: "कोई मिलती-जुलती याद नहीं मिली",
+      changeFilters: "श्रेणी या तारीख फ़िल्टर बदलकर देखें।",
+      linkedProfileFallback: "जुड़ी हुई प्रोफ़ाइल",
+      recordedMoments: "आपके रिकॉर्ड किए पल",
+      voiceMemoriesTitle: "वॉइस यादें",
+      listenSavedRecordings:
+        "अपनी यादों के साथ सेव की गई आवाज़ें और रिकॉर्डिंग सुनें।",
+      recordMemory: "+ याद रिकॉर्ड करें",
+      noVoiceMemories: "अभी कोई वॉइस याद नहीं है",
+      useVoiceRecorder:
+        "पहली रिकॉर्डिंग सेव करने के लिए Add Memory में वॉइस रिकॉर्डर का उपयोग करें।",
+      goToAddMemory: "याद जोड़ने जाएं",
+      viewMemory: "याद देखें →",
+      visualStory: "आपकी तस्वीरों की कहानी",
+      photoMemoriesTitle: "फोटो यादें",
+      browsePhotos: "अपनी सेव की गई यादों से जुड़ी तस्वीरें देखें।",
+      addPhoto: "+ फोटो जोड़ें",
+      noPhotoMemories: "अभी कोई फोटो याद नहीं है",
+      addPhotoToGallery: "अपनी गैलरी बनाने के लिए याद बनाते समय फोटो जोड़ें।",
+      savedMemory: "सेव की गई याद",
+      settings: "सेटिंग्स",
+      settingsDescription:
+        "डिस्प्ले भाषा प्रबंधित करें और खाते का विवरण देखें।",
+      displayLanguage: "डिस्प्ले भाषा",
+      chooseLanguage: "Living Memory AI में उपयोग की जाने वाली भाषा चुनें।",
+      signedInAccount: "साइन-इन खाता",
+      currentAccount: "इस मेमोरी स्पेस के लिए आपका वर्तमान खाता।",
+      accountId: "खाता ID",
+      accountIdDescription:
+        "सेव की गई यादों को खाते से जोड़ने के लिए उपयोग किया जाता है।",
+      backToDashboard: "डैशबोर्ड पर वापस जाएं",
+      imageFormatError: "कृपया JPG, PNG, WEBP या GIF छवि चुनें।",
+      recordMemoryButton: "याद रिकॉर्ड करें",
+      transcriptAdded: "ट्रांसक्रिप्ट जोड़ा गया",
+      imageUploadError: "छवि अपलोड नहीं हो सकी।",
+      profileNameRequired: "कृपया प्रोफ़ाइल का नाम लिखें।",
+      relationshipRequired: "कृपया रिश्ता लिखें।",
+      loginRequired: "कृपया पहले लॉगिन करें।",
+      profileLoadError: "प्रोफ़ाइल लोड नहीं हो सकीं।",
+    },
+    Tamil: {
+      brandTagline: "உங்கள் கதை, பாதுகாக்கப்பட்டது",
+      workspace: "பணியிடம்",
+      breadcrumb: "லிவிங் மெமரி AI / பணியிடம்",
+      closeNavigation: "வழிசெலுத்தலை மூடவும்",
+      openNavigation: "வழிசெலுத்தலைத் திறக்கவும்",
+      selectLanguage: "மொழியைத் தேர்ந்தெடுக்கவும்",
+      sidebarNote:
+        "உங்கள் நினைவுகள் உங்கள் கதையின் ஒரு பகுதி. முக்கியமான தருணங்களைத் தொடர்ந்து சேர்க்கவும்.",
+      grandparentsMode: "தாத்தா பாட்டி பயன்முறை",
+      personalMemorySpace: "உங்கள் தனிப்பட்ட நினைவிடம்",
+      welcomeBack: "மீண்டும் வரவேற்கிறோம்",
+      welcomeDescription:
+        "உங்கள் முக்கியமான தருணங்கள், மனிதர்கள், கதைகள் — அனைத்தும் ஒரே இடத்தில்.",
+      addMemory: "+ நினைவைச் சேர்க்கவும்",
+      totalMemories: "மொத்த நினைவுகள்",
+      openMemoryLibrary: "நினைவு நூலகத்தைத் திறக்கவும் →",
+      customProfiles: "தனிப்பயன் சுயவிவரங்கள்",
+      explorePeople: "உங்கள் மக்களைப் பார்க்கவும் →",
+      photoMemories: "புகைப்பட நினைவுகள்",
+      openPhotoGallery: "புகைப்படத் தொகுப்பைத் திறக்கவும் →",
+      voiceMemories: "குரல் நினைவுகள்",
+      listenRecordings: "பதிவுகளைக் கேளுங்கள் →",
+      yourCollection: "உங்கள் தொகுப்பு",
+      recentMemories: "சமீபத்திய நினைவுகள்",
+      viewAll: "அனைத்தையும் காண்க →",
+      storyStarts: "உங்கள் கதை இங்கே தொடங்குகிறது",
+      saveFirstMemory:
+        "உங்கள் முதல் சிறப்பு நினைவைச் சேமிக்கவும்; அது டாஷ்போர்டில் தெரியும்.",
+      createFirstMemory: "உங்கள் முதல் நினைவை உருவாக்கவும்",
+      jumpBackIn: "மீண்டும் தொடருங்கள்",
+      quickAccess: "விரைவு அணுகல்",
+      askYourAI: "உங்கள் AI-யிடம் கேளுங்கள்",
+      talkToSavedMemories: "சேமித்த நினைவுகளுடன் பேசுங்கள்",
+      peopleProfiles: "நபர் சுயவிவரங்கள்",
+      exploreMemoriesByPerson: "நபரின்படி நினைவுகளைப் பாருங்கள்",
+      memoryTimeline: "நினைவு காலவரிசை",
+      revisitByDate: "தேதியின்படி தருணங்களை மீண்டும் பாருங்கள்",
+      preferences: "விருப்பங்கள்",
+      preferencesTitle: "விருப்பங்கள்",
+      manageLanguageAccount: "மொழி மற்றும் கணக்கை நிர்வகிக்கவும்",
+      chatWith: "யாருடைய நினைவுகளுடன் பேச வேண்டும்:",
+      allMyMemories: "எனது அனைத்து நினைவுகளும்",
+      selectedProfile: "தேர்ந்தெடுத்த சுயவிவரம்",
+      aiSearchOnlyProfile:
+        "🔒 AI இந்தச் சுயவிவரத்துடன் இணைக்கப்பட்ட நினைவுகளை மட்டுமே தேடும்.",
+      aiSearchAll: "💭 AI நீங்கள் சேமித்த அனைத்து நினைவுகளிலும் தேடலாம்.",
+      listen: "🔊 கேளுங்கள்",
+      linkedProfile: "இணைக்கப்பட்ட சுயவிவரம்:",
+      noProfileAssigned: "சுயவிவரம் ஒதுக்கப்படவில்லை",
+      hideMemoryFrom: "🔒 இந்த நினைவை இவர்களிடமிருந்து மறைக்கவும்",
+      privacyDescription:
+        "இந்த நினைவைக் காணக்கூடாத குடும்பச் சுயவிவரங்களைத் தேர்ந்தெடுக்கவும்.",
+      createProfileForPrivacy:
+        "நினைவு தனியுரிமையை அமைக்க உறவு சுயவிவரத்தை உருவாக்கவும்.",
+      whoseMemory: "இது யாருடைய நினைவு?",
+      generalMemory: "பொதுவான நினைவு — சுயவிவரம் இல்லை",
+      showAllMemories: "அனைத்து நினைவுகளையும் காட்டு",
+      filterMemories: "நினைவுகளை வடிகட்டவும்",
+      filterDescription: "வகை அல்லது தேதி வரம்பின்படி தருணங்களைக் கண்டறியவும்.",
+      clearAll: "↺ அனைத்தையும் அழிக்கவும்",
+      profile: "சுயவிவரம்",
+      allProfiles: "அனைத்து சுயவிவரங்களும்",
+      unassignedMemories: "ஒதுக்கப்படாத நினைவுகள்",
+      category: "வகை",
+      allCategories: "அனைத்து வகைகளும்",
+      fromDate: "தொடக்க தேதி",
+      toDate: "முடிவு தேதி",
+      showing: "காட்டப்படுவது",
+      memory: "நினைவு",
+      memories: "நினைவுகள்",
+      noMatchingMemories: "பொருந்தும் நினைவுகள் இல்லை",
+      changeFilters: "வகை அல்லது தேதி வடிகட்டிகளை மாற்றிப் பாருங்கள்.",
+      linkedProfileFallback: "இணைக்கப்பட்ட சுயவிவரம்",
+      recordedMoments: "நீங்கள் பதிவு செய்த தருணங்கள்",
+      voiceMemoriesTitle: "குரல் நினைவுகள்",
+      listenSavedRecordings:
+        "உங்கள் நினைவுகளுடன் சேமித்த குரல்கள் மற்றும் பதிவுகளைக் கேளுங்கள்.",
+      recordMemory: "+ நினைவைப் பதிவு செய்யவும்",
+      noVoiceMemories: "இன்னும் குரல் நினைவுகள் இல்லை",
+      useVoiceRecorder:
+        "முதல் பதிவைச் சேமிக்க Add Memory-இல் உள்ள குரல் பதிவியைப் பயன்படுத்தவும்.",
+      goToAddMemory: "நினைவைச் சேர்க்கச் செல்லவும்",
+      viewMemory: "நினைவைக் காண்க →",
+      visualStory: "உங்கள் படங்களின் கதை",
+      photoMemoriesTitle: "புகைப்பட நினைவுகள்",
+      browsePhotos:
+        "சேமித்த நினைவுகளுடன் இணைக்கப்பட்ட புகைப்படங்களைப் பாருங்கள்.",
+      addPhoto: "+ புகைப்படம் சேர்க்கவும்",
+      noPhotoMemories: "இன்னும் புகைப்பட நினைவுகள் இல்லை",
+      addPhotoToGallery:
+        "உங்கள் தொகுப்பை உருவாக்க நினைவைச் சேமிக்கும் போது புகைப்படத்தைச் சேர்க்கவும்.",
+      savedMemory: "சேமித்த நினைவு",
+      settings: "அமைப்புகள்",
+      settingsDescription:
+        "காட்சி மொழியை நிர்வகித்து கணக்கு விவரங்களைப் பாருங்கள்.",
+      displayLanguage: "காட்சி மொழி",
+      chooseLanguage:
+        "Living Memory AI முழுவதும் பயன்படுத்தப்படும் மொழியைத் தேர்ந்தெடுக்கவும்.",
+      signedInAccount: "உள்நுழைந்த கணக்கு",
+      currentAccount: "இந்த நினைவிடத்திற்கான உங்கள் தற்போதைய கணக்கு.",
+      accountId: "கணக்கு ID",
+      accountIdDescription:
+        "சேமித்த நினைவுகளை கணக்குடன் இணைக்க இந்த பயன்பாடு பயன்படுத்துகிறது.",
+      backToDashboard: "டாஷ்போர்டுக்குத் திரும்பவும்",
+      imageFormatError: "JPG, PNG, WEBP அல்லது GIF படத்தைத் தேர்ந்தெடுக்கவும்.",
+      recordMemoryButton: "நினைவைப் பதிவு செய்யவும்",
+      transcriptAdded: "உரை சேர்க்கப்பட்டது",
+      imageUploadError: "படத்தைப் பதிவேற்ற முடியவில்லை.",
+      profileNameRequired: "சுயவிவரப் பெயரை உள்ளிடவும்.",
+      relationshipRequired: "உறவை உள்ளிடவும்.",
+      loginRequired: "முதலில் உள்நுழையவும்.",
+      profileLoadError: "சுயவிவரங்களை ஏற்ற முடியவில்லை.",
+    },
+    Malayalam: {
+      brandTagline: "നിങ്ങളുടെ കഥ, സൂക്ഷിച്ചിരിക്കുന്നു",
+      workspace: "പ്രവർത്തനമേഖല",
+      breadcrumb: "ലിവിംഗ് മെമ്മറി AI / പ്രവർത്തനമേഖല",
+      closeNavigation: "നാവിഗേഷൻ അടയ്ക്കുക",
+      openNavigation: "നാവിഗേഷൻ തുറക്കുക",
+      selectLanguage: "ഭാഷ തിരഞ്ഞെടുക്കുക",
+      sidebarNote:
+        "നിങ്ങളുടെ ഓർമ്മകൾ നിങ്ങളുടെ കഥയുടെ ഭാഗമാണ്. പ്രധാനപ്പെട്ട നിമിഷങ്ങൾ ചേർത്തുകൊണ്ടിരിക്കുക.",
+      grandparentsMode: "മുത്തശ്ശൻ മുത്തശ്ശി മോഡ്",
+      personalMemorySpace: "നിങ്ങളുടെ വ്യക്തിഗത ഓർമ്മസ്ഥലം",
+      welcomeBack: "തിരികെ സ്വാഗതം",
+      welcomeDescription:
+        "നിങ്ങളുടെ പ്രധാനപ്പെട്ട നിമിഷങ്ങളും ആളുകളും കഥകളും — എല്ലാം ഒരിടത്ത്.",
+      addMemory: "+ ഒരു ഓർമ്മ ചേർക്കുക",
+      totalMemories: "ആകെ ഓർമ്മകൾ",
+      openMemoryLibrary: "ഓർമ്മ ലൈബ്രറി തുറക്കുക →",
+      customProfiles: "ഇഷ്ടാനുസൃത പ്രൊഫൈലുകൾ",
+      explorePeople: "നിങ്ങളുടെ ആളുകളെ കാണുക →",
+      photoMemories: "ഫോട്ടോ ഓർമ്മകൾ",
+      openPhotoGallery: "ഫോട്ടോ ഗാലറി തുറക്കുക →",
+      voiceMemories: "ശബ്ദ ഓർമ്മകൾ",
+      listenRecordings: "റെക്കോർഡിംഗുകൾ കേൾക്കുക →",
+      yourCollection: "നിങ്ങളുടെ ശേഖരം",
+      recentMemories: "സമീപകാല ഓർമ്മകൾ",
+      viewAll: "എല്ലാം കാണുക →",
+      storyStarts: "നിങ്ങളുടെ കഥ ഇവിടെ തുടങ്ങുന്നു",
+      saveFirstMemory:
+        "നിങ്ങളുടെ ആദ്യത്തെ പ്രത്യേക ഓർമ്മ സംരക്ഷിക്കൂ; അത് ഡാഷ്ബോർഡിൽ കാണാം.",
+      createFirstMemory: "നിങ്ങളുടെ ആദ്യ ഓർമ്മ സൃഷ്ടിക്കുക",
+      jumpBackIn: "വീണ്ടും തുടരുക",
+      quickAccess: "വേഗത്തിലുള്ള പ്രവേശനം",
+      askYourAI: "നിങ്ങളുടെ AI-യോട് ചോദിക്കുക",
+      talkToSavedMemories: "സംരക്ഷിച്ച ഓർമ്മകളോട് സംസാരിക്കുക",
+      peopleProfiles: "ആളുകളുടെ പ്രൊഫൈലുകൾ",
+      exploreMemoriesByPerson: "വ്യക്തി അനുസരിച്ച് ഓർമ്മകൾ കാണുക",
+      memoryTimeline: "ഓർമ്മകളുടെ സമയരേഖ",
+      revisitByDate: "തീയതി അനുസരിച്ച് നിമിഷങ്ങൾ വീണ്ടും കാണുക",
+      preferences: "മുൻഗണനകൾ",
+      preferencesTitle: "മുൻഗണനകൾ",
+      manageLanguageAccount: "ഭാഷയും അക്കൗണ്ടും നിയന്ത്രിക്കുക",
+      chatWith: "ആരുടെ ഓർമ്മകളോടാണ് സംസാരിക്കേണ്ടത്:",
+      allMyMemories: "എന്റെ എല്ലാ ഓർമ്മകളും",
+      selectedProfile: "തിരഞ്ഞെടുത്ത പ്രൊഫൈൽ",
+      aiSearchOnlyProfile:
+        "🔒 AI ഈ പ്രൊഫൈലുമായി ബന്ധിപ്പിച്ച ഓർമ്മകൾ മാത്രം തിരയും.",
+      aiSearchAll: "💭 നിങ്ങൾ സംരക്ഷിച്ച എല്ലാ ഓർമ്മകളിലും AI-ക്ക് തിരയാം.",
+      listen: "🔊 കേൾക്കുക",
+      linkedProfile: "ബന്ധിപ്പിച്ച പ്രൊഫൈൽ:",
+      noProfileAssigned: "പ്രൊഫൈൽ നൽകിയിട്ടില്ല",
+      hideMemoryFrom: "🔒 ഈ ഓർമ്മ ഇവരിൽ നിന്ന് മറയ്ക്കുക",
+      privacyDescription:
+        "ഈ ഓർമ്മ കാണാൻ പാടില്ലാത്ത കുടുംബ പ്രൊഫൈലുകൾ തിരഞ്ഞെടുക്കുക.",
+      createProfileForPrivacy:
+        "ഓർമ്മയുടെ സ്വകാര്യത ക്രമീകരിക്കാൻ ബന്ധ പ്രൊഫൈൽ സൃഷ്ടിക്കുക.",
+      whoseMemory: "ഇത് ആരുടെ ഓർമ്മയാണ്?",
+      generalMemory: "പൊതുവായ ഓർമ്മ — പ്രൊഫൈൽ ഇല്ല",
+      showAllMemories: "എല്ലാ ഓർമ്മകളും കാണിക്കുക",
+      filterMemories: "ഓർമ്മകൾ ഫിൽട്ടർ ചെയ്യുക",
+      filterDescription:
+        "വിഭാഗം അല്ലെങ്കിൽ തീയതി പരിധി അനുസരിച്ച് നിമിഷങ്ങൾ കണ്ടെത്തുക.",
+      clearAll: "↺ എല്ലാം മായ്ക്കുക",
+      profile: "പ്രൊഫൈൽ",
+      allProfiles: "എല്ലാ പ്രൊഫൈലുകളും",
+      unassignedMemories: "നിയോഗിക്കാത്ത ഓർമ്മകൾ",
+      category: "വിഭാഗം",
+      allCategories: "എല്ലാ വിഭാഗങ്ങളും",
+      fromDate: "തുടക്ക തീയതി",
+      toDate: "അവസാന തീയതി",
+      showing: "കാണിക്കുന്നത്",
+      memory: "ഓർമ്മ",
+      memories: "ഓർമ്മകൾ",
+      noMatchingMemories: "പൊരുത്തപ്പെടുന്ന ഓർമ്മകളില്ല",
+      changeFilters: "വിഭാഗം അല്ലെങ്കിൽ തീയതി ഫിൽട്ടറുകൾ മാറ്റി നോക്കൂ.",
+      linkedProfileFallback: "ബന്ധിപ്പിച്ച പ്രൊഫൈൽ",
+      recordedMoments: "നിങ്ങൾ റെക്കോർഡ് ചെയ്ത നിമിഷങ്ങൾ",
+      voiceMemoriesTitle: "ശബ്ദ ഓർമ്മകൾ",
+      listenSavedRecordings:
+        "നിങ്ങളുടെ ഓർമ്മകൾക്കൊപ്പം സൂക്ഷിച്ച ശബ്ദങ്ങളും റെക്കോർഡിംഗുകളും കേൾക്കൂ.",
+      recordMemory: "+ ഒരു ഓർമ്മ റെക്കോർഡ് ചെയ്യുക",
+      noVoiceMemories: "ഇതുവരെ ശബ്ദ ഓർമ്മകളില്ല",
+      useVoiceRecorder:
+        "ആദ്യ റെക്കോർഡിംഗ് സംരക്ഷിക്കാൻ Add Memory-യിലെ വോയ്സ് റെക്കോർഡർ ഉപയോഗിക്കുക.",
+      goToAddMemory: "ഓർമ്മ ചേർക്കാൻ പോകുക",
+      viewMemory: "ഓർമ്മ കാണുക →",
+      visualStory: "നിങ്ങളുടെ ചിത്രങ്ങളുടെ കഥ",
+      photoMemoriesTitle: "ഫോട്ടോ ഓർമ്മകൾ",
+      browsePhotos: "സംരക്ഷിച്ച ഓർമ്മകളോട് ചേർത്ത ഫോട്ടോകൾ കാണുക.",
+      addPhoto: "+ ഫോട്ടോ ചേർക്കുക",
+      noPhotoMemories: "ഇതുവരെ ഫോട്ടോ ഓർമ്മകളില്ല",
+      addPhotoToGallery:
+        "നിങ്ങളുടെ ഗാലറി നിർമ്മിക്കാൻ ഓർമ്മ സൃഷ്ടിക്കുമ്പോൾ ഫോട്ടോ ചേർക്കുക.",
+      savedMemory: "സംരക്ഷിച്ച ഓർമ്മ",
+      settings: "ക്രമീകരണങ്ങൾ",
+      settingsDescription:
+        "പ്രദർശന ഭാഷ നിയന്ത്രിക്കുകയും അക്കൗണ്ട് വിവരങ്ങൾ പരിശോധിക്കുകയും ചെയ്യുക.",
+      displayLanguage: "പ്രദർശന ഭാഷ",
+      chooseLanguage: "Living Memory AI-യിൽ ഉപയോഗിക്കുന്ന ഭാഷ തിരഞ്ഞെടുക്കുക.",
+      signedInAccount: "സൈൻ ഇൻ ചെയ്ത അക്കൗണ്ട്",
+      currentAccount: "ഈ ഓർമ്മസ്ഥലത്തിനുള്ള നിങ്ങളുടെ നിലവിലെ അക്കൗണ്ട്.",
+      accountId: "അക്കൗണ്ട് ID",
+      accountIdDescription:
+        "സംരക്ഷിച്ച ഓർമ്മകളെ അക്കൗണ്ടുമായി ബന്ധിപ്പിക്കാൻ ആപ്പ് ഉപയോഗിക്കുന്നു.",
+      backToDashboard: "ഡാഷ്ബോർഡിലേക്ക് മടങ്ങുക",
+      imageFormatError: "JPG, PNG, WEBP അല്ലെങ്കിൽ GIF ചിത്രം തിരഞ്ഞെടുക്കുക.",
+      recordMemoryButton: "ഓർമ്മ റെക്കോർഡ് ചെയ്യുക",
+      transcriptAdded: "ട്രാൻസ്ക്രിപ്റ്റ് ചേർത്തു",
+      imageUploadError: "ചിത്രം അപ്‌ലോഡ് ചെയ്യാൻ കഴിഞ്ഞില്ല.",
+      profileNameRequired: "പ്രൊഫൈൽ പേര് നൽകുക.",
+      relationshipRequired: "ബന്ധം നൽകുക.",
+      loginRequired: "ആദ്യം ലോഗിൻ ചെയ്യുക.",
+      profileLoadError: "പ്രൊഫൈലുകൾ ലോഡ് ചെയ്യാനായില്ല.",
+    },
+  };
+  const wt =
+    workspaceTextTranslations[language] || workspaceTextTranslations.English;
+
+  const dashboardNavTranslations = {
+    English: {
+      dashboard: "Dashboard",
+      memories: "Memories",
+      profiles: "Profiles",
+      timeline: "Timeline",
+      chat: "AI Chat",
+      voice: "Voice Memories",
+      photos: "Photo Memories",
+      capsules: "Time Capsules",
+      settings: "Settings",
+    },
+    Kannada: {
+      dashboard: "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+      memories: "ನೆನಪುಗಳು",
+      profiles: "ಪ್ರೊಫೈಲ್‌ಗಳು",
+      timeline: "ಕಾಲರೇಖೆ",
+      chat: "AI ಚಾಟ್",
+      voice: "ಧ್ವನಿ ನೆನಪುಗಳು",
+      photos: "ಫೋಟೋ ನೆನಪುಗಳು",
+      capsules: "ಟೈಮ್ ಕ್ಯಾಪ್ಸೂಲ್‌ಗಳು",
+      settings: "ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
+    },
+    Hindi: {
+      dashboard: "डैशबोर्ड",
+      memories: "यादें",
+      profiles: "प्रोफ़ाइल",
+      timeline: "समयरेखा",
+      chat: "AI चैट",
+      voice: "वॉइस यादें",
+      photos: "फोटो यादें",
+      capsules: "टाइम कैप्सूल",
+      settings: "सेटिंग्स",
+    },
+    Tamil: {
+      dashboard: "டாஷ்போர்டு",
+      memories: "நினைவுகள்",
+      profiles: "சுயவிவரங்கள்",
+      timeline: "காலவரிசை",
+      chat: "AI அரட்டை",
+      voice: "குரல் நினைவுகள்",
+      photos: "புகைப்பட நினைவுகள்",
+      capsules: "டைம் கேப்சூல்கள்",
+      settings: "அமைப்புகள்",
+    },
+    Malayalam: {
+      dashboard: "ഡാഷ്ബോർഡ്",
+      memories: "ഓർമ്മകൾ",
+      profiles: "പ്രൊഫൈലുകൾ",
+      timeline: "കാലരേഖ",
+      chat: "AI ചാറ്റ്",
+      voice: "ശബ്ദ ഓർമ്മകൾ",
+      photos: "ഫോട്ടോ ഓർമ്മകൾ",
+      capsules: "ടൈം ക്യാപ്സ്യൂളുകൾ",
+      settings: "ക്രമീകരണങ്ങൾ",
+    },
+  };
+  const dashboardNav =
+    dashboardNavTranslations[language] || dashboardNavTranslations.English;
+  const dashboardNavItems = [
+    { id: "dashboard", label: dashboardNav.dashboard, icon: "▦" },
+    { id: "memories", label: dashboardNav.memories, icon: "✧" },
+    { id: "profiles", label: dashboardNav.profiles, icon: "♧" },
+    { id: "timeline", label: dashboardNav.timeline, icon: "◷" },
+    { id: "chat", label: dashboardNav.chat, icon: "✉" },
+    { id: "voice", label: dashboardNav.voice, icon: "♫" },
+    { id: "photos", label: dashboardNav.photos, icon: "▧" },
+    { id: "capsules", label: dashboardNav.capsules, icon: "⌛" },
+    { id: "grandparents", label: wt.grandparentsMode, icon: "❤️" },
+    { id: "settings", label: dashboardNav.settings, icon: "⚙" },
+  ];
+  const dashboardPageTitle =
+    dashboardNavItems.find((item) => item.id === activePage)?.label ||
+    dashboardNav.dashboard;
+
   const profileTranslations = {
     English: {
       label: "👥 RELATIONSHIP PROFILES",
@@ -935,7 +1599,6 @@ function App() {
       fatherDescription:
         "Important experiences, conversations and family memories.",
       viewMemories: "View Memories →",
-      generateSummary: "🧠 Generate AI Summary",
       generateLifeStory: "📖 Generate AI Life Story",
     },
     Kannada: {
@@ -948,7 +1611,6 @@ function App() {
       father: "ತಂದೆ",
       fatherDescription: "ಪ್ರಮುಖ ಅನುಭವಗಳು, ಸಂಭಾಷಣೆಗಳು ಮತ್ತು ಕುಟುಂಬದ ನೆನಪುಗಳು.",
       viewMemories: "ನೆನಪುಗಳನ್ನು ನೋಡಿ →",
-      generateSummary: "🧠 AI ಸಾರಾಂಶ ರಚಿಸಿ",
       generateLifeStory: "📖 AI ಜೀವನ ಕಥೆ ರಚಿಸಿ",
     },
     Hindi: {
@@ -960,7 +1622,6 @@ function App() {
       father: "पिता",
       fatherDescription: "महत्वपूर्ण अनुभव, बातचीत और पारिवारिक यादें।",
       viewMemories: "यादें देखें →",
-      generateSummary: "🧠 AI सारांश बनाएं",
       generateLifeStory: "📖 AI जीवन कहानी बनाएं",
     },
     Tamil: {
@@ -975,7 +1636,6 @@ function App() {
       fatherDescription:
         "முக்கிய அனுபவங்கள், உரையாடல்கள் மற்றும் குடும்ப நினைவுகள்.",
       viewMemories: "நினைவுகளைக் காண்க →",
-      generateSummary: "🧠 AI சுருக்கத்தை உருவாக்கு",
       generateLifeStory: "📖 AI வாழ்க்கைக் கதையை உருவாக்கு",
     },
     Malayalam: {
@@ -988,7 +1648,6 @@ function App() {
       father: "അച്ഛൻ",
       fatherDescription: "പ്രധാന അനുഭവങ്ങൾ, സംഭാഷണങ്ങൾ, കുടുംബ ഓർമ്മകൾ.",
       viewMemories: "ഓർമ്മകൾ കാണുക →",
-      generateSummary: "🧠 AI സംഗ്രഹം സൃഷ്ടിക്കുക",
       generateLifeStory: "📖 AI ജീവിതകഥ സൃഷ്ടിക്കുക",
     },
   };
@@ -1011,9 +1670,7 @@ function App() {
       description: "Description",
       creating: "Creating...",
       cancel: "Cancel",
-      generatingSummary: "Generating summary...",
       writingLifeStory: "Writing life story...",
-      livingIdentity: "✨ Living Identity",
       lifeStoryTitle: "📖 {name}'s Life Story",
       copyLifeStory: "📋 Copy Life Story",
       copySuccess: "Life story copied successfully! 💗",
@@ -1034,9 +1691,7 @@ function App() {
       description: "ವಿವರಣೆ",
       creating: "ರಚಿಸಲಾಗುತ್ತಿದೆ...",
       cancel: "ರದ್ದುಮಾಡಿ",
-      generatingSummary: "ಸಾರಾಂಶ ರಚಿಸಲಾಗುತ್ತಿದೆ...",
       writingLifeStory: "ಜೀವನ ಕಥೆ ಬರೆಯಲಾಗುತ್ತಿದೆ...",
-      livingIdentity: "✨ ಜೀವನದ ಪರಿಚಯ",
       lifeStoryTitle: "📖 {name} ಅವರ ಜೀವನ ಕಥೆ",
       copyLifeStory: "📋 ಜೀವನ ಕಥೆಯನ್ನು ನಕಲಿಸಿ",
       copySuccess: "ಜೀವನ ಕಥೆಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ನಕಲಿಸಲಾಗಿದೆ! 💗",
@@ -1057,9 +1712,7 @@ function App() {
       description: "विवरण",
       creating: "बनाया जा रहा है...",
       cancel: "रद्द करें",
-      generatingSummary: "सारांश बनाया जा रहा है...",
       writingLifeStory: "जीवन कहानी लिखी जा रही है...",
-      livingIdentity: "✨ जीवंत पहचान",
       lifeStoryTitle: "📖 {name} की जीवन कहानी",
       copyLifeStory: "📋 जीवन कहानी कॉपी करें",
       copySuccess: "जीवन कहानी सफलतापूर्वक कॉपी हो गई! 💗",
@@ -1080,9 +1733,7 @@ function App() {
       description: "விளக்கம்",
       creating: "உருவாக்கப்படுகிறது...",
       cancel: "ரத்து செய்",
-      generatingSummary: "சுருக்கம் உருவாக்கப்படுகிறது...",
       writingLifeStory: "வாழ்க்கைக் கதை எழுதப்படுகிறது...",
-      livingIdentity: "✨ வாழ்வின் அடையாளம்",
       lifeStoryTitle: "📖 {name} அவர்களின் வாழ்க்கைக் கதை",
       copyLifeStory: "📋 வாழ்க்கைக் கதையை நகலெடு",
       copySuccess: "வாழ்க்கைக் கதை வெற்றிகரமாக நகலெடுக்கப்பட்டது! 💗",
@@ -1103,9 +1754,7 @@ function App() {
       description: "വിവരണം",
       creating: "സൃഷ്ടിക്കുന്നു...",
       cancel: "റദ്ദാക്കുക",
-      generatingSummary: "സംഗ്രഹം സൃഷ്ടിക്കുന്നു...",
       writingLifeStory: "ജീവിതകഥ എഴുതുന്നു...",
-      livingIdentity: "✨ ജീവിതപരിചയം",
       lifeStoryTitle: "📖 {name}-ന്റെ ജീവിതകഥ",
       copyLifeStory: "📋 ജീവിതകഥ പകർത്തുക",
       copySuccess: "ജീവിതകഥ വിജയകരമായി പകർത്തി! 💗",
@@ -1114,7 +1763,77 @@ function App() {
   };
   const profileMoreUi =
     profileMoreTranslations[language] || profileMoreTranslations.English;
+  const deleteProfileTranslations = {
+    English: {
+      button: "🗑️ Delete Profile",
+      title: (name) => `Delete ${name}?`,
+      description: "Choose what to do with this profile's saved memories.",
+      keep: "Keep memories as general memories",
+      deleteAll: "Delete profile and all its memories",
+      cancel: "Cancel",
+      deleting: "Deleting profile...",
+      keptMessage: "Profile deleted. Its memories are now general memories.",
+      deletedMessage: "Profile and its memories deleted successfully.",
+    },
 
+    Kannada: {
+      button: "🗑️ ಪ್ರೊಫೈಲ್ ಅಳಿಸಿ",
+      title: (name) => `${name} ಪ್ರೊಫೈಲ್ ಅಳಿಸುವುದೇ?`,
+      description:
+        "ಈ ಪ್ರೊಫೈಲ್‌ಗೆ ಸಂಬಂಧಿಸಿದ ನೆನಪುಗಳ ಬಗ್ಗೆ ಏನು ಮಾಡಲು ಬಯಸುತ್ತೀರಿ?",
+      keep: "ನೆನಪುಗಳನ್ನು ಸಾಮಾನ್ಯ ನೆನಪುಗಳಾಗಿ ಉಳಿಸಿ",
+      deleteAll: "ಪ್ರೊಫೈಲ್ ಮತ್ತು ಅದರ ಎಲ್ಲಾ ನೆನಪುಗಳನ್ನು ಅಳಿಸಿ",
+      cancel: "ರದ್ದುಮಾಡಿ",
+      deleting: "ಪ್ರೊಫೈಲ್ ಅಳಿಸಲಾಗುತ್ತಿದೆ...",
+      keptMessage:
+        "ಪ್ರೊಫೈಲ್ ಅಳಿಸಲಾಗಿದೆ. ನೆನಪುಗಳನ್ನು ಸಾಮಾನ್ಯ ನೆನಪುಗಳಾಗಿ ಉಳಿಸಲಾಗಿದೆ.",
+      deletedMessage: "ಪ್ರೊಫೈಲ್ ಮತ್ತು ಅದರ ನೆನಪುಗಳನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಅಳಿಸಲಾಗಿದೆ.",
+    },
+
+    Hindi: {
+      button: "🗑️ प्रोफ़ाइल हटाएँ",
+      title: (name) => `${name} की प्रोफ़ाइल हटाएँ?`,
+      description: "इस प्रोफ़ाइल से जुड़ी यादों के साथ आप क्या करना चाहते हैं?",
+      keep: "यादों को सामान्य यादों के रूप में रखें",
+      deleteAll: "प्रोफ़ाइल और उससे जुड़ी सभी यादें हटाएँ",
+      cancel: "रद्द करें",
+      deleting: "प्रोफ़ाइल हटाई जा रही है...",
+      keptMessage:
+        "प्रोफ़ाइल हटा दी गई। उसकी यादें सामान्य यादों के रूप में सुरक्षित हैं।",
+      deletedMessage: "प्रोफ़ाइल और उसकी यादें सफलतापूर्वक हटा दी गईं।",
+    },
+
+    Tamil: {
+      button: "🗑️ சுயவிவரத்தை நீக்கு",
+      title: (name) => `${name} சுயவிவரத்தை நீக்கவா?`,
+      description:
+        "இந்தச் சுயவிவரத்துடன் இணைக்கப்பட்ட நினைவுகளுக்கு என்ன செய்ய விரும்புகிறீர்கள்?",
+      keep: "நினைவுகளைப் பொதுவான நினைவுகளாக வைத்திரு",
+      deleteAll: "சுயவிவரத்தையும் அதன் அனைத்து நினைவுகளையும் நீக்கு",
+      cancel: "ரத்து செய்",
+      deleting: "சுயவிவரம் நீக்கப்படுகிறது...",
+      keptMessage:
+        "சுயவிவரம் நீக்கப்பட்டது. அதன் நினைவுகள் பொதுவான நினைவுகளாக வைக்கப்பட்டுள்ளன.",
+      deletedMessage: "சுயவிவரமும் அதன் நினைவுகளும் வெற்றிகரமாக நீக்கப்பட்டன.",
+    },
+
+    Malayalam: {
+      button: "🗑️ പ്രൊഫൈൽ ഇല്ലാതാക്കുക",
+      title: (name) => `${name} എന്ന പ്രൊഫൈൽ ഇല്ലാതാക്കണോ?`,
+      description:
+        "ഈ പ്രൊഫൈലുമായി ബന്ധിപ്പിച്ച ഓർമ്മകളെക്കുറിച്ച് എന്ത് ചെയ്യണം?",
+      keep: "ഓർമ്മകൾ പൊതുവായ ഓർമ്മകളായി നിലനിർത്തുക",
+      deleteAll: "പ്രൊഫൈലും അതിലെ എല്ലാ ഓർമ്മകളും ഇല്ലാതാക്കുക",
+      cancel: "റദ്ദാക്കുക",
+      deleting: "പ്രൊഫൈൽ ഇല്ലാതാക്കുന്നു...",
+      keptMessage:
+        "പ്രൊഫൈൽ ഇല്ലാതാക്കി. ഓർമ്മകൾ പൊതുവായ ഓർമ്മകളായി നിലനിർത്തി.",
+      deletedMessage: "പ്രൊഫൈലും അതിലെ ഓർമ്മകളും വിജയകരമായി ഇല്ലാതാക്കി.",
+    },
+  };
+
+  const deleteProfileUi =
+    deleteProfileTranslations[language] || deleteProfileTranslations.English;
   const timelineTranslations = {
     English: {
       personalTitle: "🕰️ Personal Memory Timeline",
@@ -1262,7 +1981,7 @@ function App() {
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      setMemoryMessage("Please select a JPG, PNG, WEBP or GIF image.");
+      setMemoryMessage(wt.imageFormatError);
       return;
     }
 
@@ -1297,7 +2016,7 @@ function App() {
 
       formData.append("image", selectedImage);
 
-      const response = await fetch(`${API}/memories/${memoryId}/image`, {
+      const response = await apiFetch(`${API}/memories/${memoryId}/image`, {
         method: "POST",
         body: formData,
       });
@@ -1334,7 +2053,7 @@ function App() {
 
       formData.append("audio", selectedAudio, "memory.webm");
 
-      const response = await fetch(`${API}/memories/${memoryId}/audio`, {
+      const response = await apiFetch(`${API}/memories/${memoryId}/audio`, {
         method: "POST",
         body: formData,
       });
@@ -1384,7 +2103,7 @@ function App() {
     setAuthLoading(true);
 
     try {
-      const response = await fetch(`${API}/users/signup`, {
+      const response = await apiFetch(`${API}/users/signup`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1426,7 +2145,7 @@ function App() {
     setAuthLoading(true);
 
     try {
-      const response = await fetch(`${API}/users/login`, {
+      const response = await apiFetch(`${API}/users/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1444,7 +2163,13 @@ function App() {
       }
 
       const id = Number(data.user_id);
+      if (!data.access_token) {
+        throw new Error(
+          "Login response did not include an authentication token.",
+        );
+      }
 
+      localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("loggedIn", "true");
 
       localStorage.setItem("user_id", String(id));
@@ -1477,7 +2202,7 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem("loggedIn");
-
+    localStorage.removeItem("access_token");
     localStorage.removeItem("user_id");
 
     localStorage.removeItem("email");
@@ -1516,7 +2241,7 @@ function App() {
     }
 
     try {
-      const response = await fetch(`${API}/memories/?user_id=${id}`);
+      const response = await apiFetch(`${API}/memories/?user_id=${id}`);
 
       if (!response.ok) {
         throw new Error("Could not load memories.");
@@ -1543,7 +2268,7 @@ function App() {
 
         if (!id || cancelled) return;
 
-        const response = await fetch(`${API}/memories/?user_id=${id}`);
+        const response = await apiFetch(`${API}/memories/?user_id=${id}`);
 
         if (!response.ok) {
           throw new Error("Could not load memories.");
@@ -1596,7 +2321,7 @@ function App() {
     setSaving(true);
 
     try {
-      const response = await fetch(`${API}/memories/`, {
+      const response = await apiFetch(`${API}/memories/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1607,6 +2332,7 @@ function App() {
           memory_type: memoryType,
           user_id: userId,
           profile_id: selectedProfileId ? Number(selectedProfileId) : null,
+          hidden_from_profile_ids: hiddenFromProfileIds,
         }),
       });
 
@@ -1631,8 +2357,8 @@ function App() {
 
       setTitle("");
       setContent("");
+      setHiddenFromProfileIds([]);
       setMemoryType("personal");
-
       clearSelectedImage();
       setSelectedAudio(null);
 
@@ -1676,7 +2402,7 @@ function App() {
     }
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API}/memories/search?q=${encodeURIComponent(
           search.trim(),
         )}&user_id=${userId}`,
@@ -1719,6 +2445,17 @@ function App() {
     setEditProfileId(
       memory.profile_id != null ? String(memory.profile_id) : "",
     );
+    setEditHiddenFromProfileIds(
+      Array.isArray(memory.hidden_from_profile_ids)
+        ? [
+            ...new Set(
+              memory.hidden_from_profile_ids
+                .map(Number)
+                .filter(Number.isFinite),
+            ),
+          ]
+        : [],
+    );
 
     setMemoryMessage("");
 
@@ -1734,6 +2471,7 @@ function App() {
     setEditContent("");
     setEditMemoryType("personal");
     setEditProfileId("");
+    setEditHiddenFromProfileIds([]);
     setMemoryMessage("");
   };
 
@@ -1761,7 +2499,7 @@ function App() {
     setMemoryMessage("");
 
     try {
-      const response = await fetch(`${API}/memories/${editingMemoryId}`, {
+      const response = await apiFetch(`${API}/memories/${editingMemoryId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -1772,6 +2510,7 @@ function App() {
           memory_type: editMemoryType,
           user_id: userId,
           profile_id: editProfileId ? Number(editProfileId) : null,
+          hidden_from_profile_ids: editHiddenFromProfileIds,
         }),
       });
 
@@ -1806,7 +2545,7 @@ function App() {
     if (!confirmDelete) return;
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API}/memories/${memoryId}?user_id=${userId}`,
         {
           method: "DELETE",
@@ -1848,7 +2587,7 @@ function App() {
     setLoadingAI(true);
 
     try {
-      const response = await fetch(`${API}/memories/chat`, {
+      const response = await apiFetch(`${API}/memories/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1903,7 +2642,7 @@ function App() {
   const speakAIResponse = async (text) => {
     if (["Kannada", "Hindi", "Tamil", "Malayalam"].includes(language)) {
       try {
-        const response = await fetch("http://127.0.0.1:8002/tts/speak", {
+        const response = await fetch(`${TTS_API}/tts/speak`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -2009,7 +2748,7 @@ function App() {
 
         if (!id || cancelled) return;
 
-        const response = await fetch(`${API}/profiles/?user_id=${id}`);
+        const response = await apiFetch(`${API}/profiles/?user_id=${id}`);
 
         if (!response.ok) {
           throw new Error("Could not load profiles.");
@@ -2063,7 +2802,7 @@ function App() {
     setProfileLoading(true);
 
     try {
-      const response = await fetch(`${API}/profiles/?user_id=${userId}`, {
+      const response = await apiFetch(`${API}/profiles/?user_id=${userId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -2104,52 +2843,7 @@ function App() {
       setProfileLoading(false);
     }
   };
-  // =====================================================
-  // GENERATE LIVING IDENTITY SUMMARY
-  // =====================================================
 
-  const generateIdentitySummary = async (profile) => {
-    if (!userId) {
-      setIdentityErrors((previous) => ({
-        ...previous,
-        [profile.id]: "Please log in first.",
-      }));
-      return;
-    }
-
-    setIdentityLoadingId(profile.id);
-
-    setIdentityErrors((previous) => ({
-      ...previous,
-      [profile.id]: "",
-    }));
-
-    try {
-      const response = await fetch(
-        `${API}/profiles/${profile.id}/identity-summary?user_id=${userId}`,
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.detail || "Could not generate identity summary.");
-      }
-
-      setIdentitySummaries((previous) => ({
-        ...previous,
-        [profile.id]: data.summary,
-      }));
-    } catch (error) {
-      console.error("Identity summary error:", error);
-
-      setIdentityErrors((previous) => ({
-        ...previous,
-        [profile.id]: error.message || "Something went wrong.",
-      }));
-    } finally {
-      setIdentityLoadingId(null);
-    }
-  };
   // =====================================================
   // GENERATE AI LIFE STORY
   // =====================================================
@@ -2171,7 +2865,7 @@ function App() {
     }));
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API}/profiles/${profile.id}/life-story?user_id=${userId}`,
       );
 
@@ -2196,6 +2890,100 @@ function App() {
       setLifeStoryLoadingId(null);
     }
   };
+  // =====================================================
+  // DELETE PROFILE
+  // =====================================================
+
+  const confirmDeleteProfile = async (deleteMemories) => {
+    if (!profileToDelete || !userId || deletingProfile) return;
+
+    const profileId = Number(profileToDelete.id);
+
+    setDeletingProfile(true);
+    setProfileDeleteError("");
+
+    try {
+      const response = await apiFetch(
+        `${API}/profiles/${profileId}?user_id=${userId}&delete_memories=${deleteMemories}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Could not delete profile.");
+      }
+
+      setProfiles((previous) =>
+        previous.filter((profile) => Number(profile.id) !== profileId),
+      );
+
+      if (deleteMemories) {
+        setMemories((previous) =>
+          previous.filter((memory) => Number(memory.profile_id) !== profileId),
+        );
+
+        setSearchResults((previous) =>
+          previous.filter((memory) => Number(memory.profile_id) !== profileId),
+        );
+      } else {
+        const unassignProfile = (items) =>
+          items.map((memory) =>
+            Number(memory.profile_id) === profileId
+              ? { ...memory, profile_id: null }
+              : memory,
+          );
+
+        setMemories((previous) => unassignProfile(previous));
+        setSearchResults((previous) => unassignProfile(previous));
+      }
+
+      setActiveProfileFilter((previous) =>
+        previous !== null && Number(previous) === profileId ? null : previous,
+      );
+
+      setTimelineProfileId((previous) =>
+        Number(previous) === profileId ? "" : previous,
+      );
+
+      setSelectedProfileId((previous) =>
+        Number(previous) === profileId ? "" : previous,
+      );
+
+      setChatProfileId((previous) =>
+        Number(previous) === profileId ? "" : previous,
+      );
+
+      setLifeStories((previous) => {
+        const updated = { ...previous };
+        delete updated[profileId];
+        return updated;
+      });
+
+      setLifeStoryErrors((previous) => {
+        const updated = { ...previous };
+        delete updated[profileId];
+        return updated;
+      });
+
+      setProfileToDelete(null);
+      setProfileDeleteError("");
+
+      window.alert(
+        deleteMemories
+          ? deleteProfileUi.deletedMessage
+          : deleteProfileUi.keptMessage,
+      );
+    } catch (error) {
+      console.error("Profile deletion error:", error);
+      setProfileDeleteError(error.message || "Could not delete profile.");
+    } finally {
+      setDeletingProfile(false);
+    }
+  };
+
   // =====================================================
   // MEMORY TYPES
   // =====================================================
@@ -2366,666 +3154,341 @@ function App() {
   // =====================================================
 
   return (
-    <div className="app">
-      {/* ================= NAVBAR ================= */}
-
-      <header className="header">
-        <div className="brand">
-          <div className="brand-icon">🧠</div>
-
+    <div className="lm-app-shell">
+      <aside className={`lm-sidebar ${sidebarOpen ? "lm-sidebar-open" : ""}`}>
+        <div className="lm-brand">
+          <div className="lm-brand-mark">🧠</div>
           <div>
-            <h1>Living Memory AI</h1>
-
-            <p>{ui.memoriesLive}</p>
+            <strong>Living Memory AI</strong>
+            <small>{wt.brandTagline}</small>
           </div>
         </div>
 
-        <nav className="nav-links">
-          <a href="#home">{ui.home}</a>
-
-          <a href="#features">{ui.features}</a>
-
-          <a href="#memories">{ui.memories}</a>
-
-          <a href="#profiles">👥 Profiles</a>
-
-          <a href="#about">{ui.about}</a>
-        </nav>
-
-        {/* LANGUAGE SELECTOR */}
-
-        <div className="language-selector">
-          <span className="language-icon">🌐</span>
-
-          <select
-            value={language}
-            onChange={handleLanguageChange}
-            aria-label="Select language"
-          >
-            {languages.map((item) => (
-              <option key={item.code} value={item.name}>
-                {item.native}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <button type="button" className="logout-button" onClick={handleLogout}>
-          {ui.logout}
-        </button>
-      </header>
-
-      <main id="home">
-        {/* =================================================
-            FUTURISTIC HERO
-        ================================================= */}
-        <section className="hero-section">
-          {/* LEFT */}
-
-          <div className="hero-left">
-            <div className="hero-badge">✨ {ui.aiPowered}</div>
-
-            <h1>{ui.heroTitle}</h1>
-
-            <p className="hero-description">{ui.heroText}</p>
-
-            <div className="hero-buttons">
-              <a className="primary-btn hero-link" href="#save-memory">
-                {ui.getStarted}
-              </a>
-
-              <a className="secondary-btn hero-link" href="#features">
-                {ui.learnMore}
-              </a>
-            </div>
-
-            <div className="memory-users">
-              <div className="user-circles">
-                <span>👩🏻</span>
-                <span>👨🏻</span>
-                <span>👩🏼</span>
-                <span>👨🏽</span>
-              </div>
-
-              <p>
-                {ui.preserveMoments}
-                <br />
-                {ui.thatMatter}
-              </p>
-            </div>
-          </div>
-
-          {/* RIGHT */}
-
-          <div className="hero-right">
-            <div className="hero-visual">
-              <img
-                src="/memory-ai-hero.png"
-                alt="Living Memory AI"
-                className="hero-image"
-              />
-
-              {/* AI CARD */}
-
-              <div className="memory-card ai-card">
-                <span className="card-icon">🤖</span>
-
-                <div>
-                  <strong>{ui.aiMemoryChat}</strong>
-
-                  <small>{ui.askPast}</small>
-                </div>
-              </div>
-
-              {/* VOICE CARD */}
-
-              <div className="memory-card voice-card">
-                <span className="card-icon">🎙️</span>
-
-                <div>
-                  <strong>{ui.voiceMemoryCard}</strong>
-
-                  <small>{ui.recordMoments}</small>
-                </div>
-              </div>
-
-              {/* PHOTO CARD */}
-
-              <div className="memory-card photo-card">
-                <span className="card-icon">🖼️</span>
-
-                <div>
-                  <strong>{ui.photoMemoryCard}</strong>
-
-                  <small>{ui.keepVisual}</small>
-                </div>
-              </div>
-
-              {/* SECURE CARD */}
-
-              <div className="memory-card secure-card">
-                <span className="card-icon">🔐</span>
-
-                <div>
-                  <strong>{ui.privateMemories}</strong>
-
-                  <small>{ui.secureAlways}</small>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        {/* =================================================
-            FEATURES
-        ================================================= */}
-        <section id="features">
-          <h2>{ui.featuresTitle}</h2>
-
-          <div className="feature-grid">
-            <div className="feature-card">
-              <div className="feature-icon">✍️</div>
-
-              <h3>{ui.textMemories}</h3>
-
-              <p>{ui.textMemoriesDesc}</p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">📸</div>
-
-              <h3>{ui.photoMemories}</h3>
-
-              <p>{ui.photoMemoriesDesc}</p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">🎤</div>
-
-              <h3>{ui.voiceMemories}</h3>
-
-              <p>{ui.voiceMemoriesDesc}</p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">🤖</div>
-
-              <h3>{ui.aiChat}</h3>
-
-              <p>{ui.aiChatDesc}</p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">🔎</div>
-
-              <h3>{ui.smartSearch}</h3>
-
-              <p>{ui.smartSearchDesc}</p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">🔐</div>
-
-              <h3>{ui.secure}</h3>
-
-              <p>{ui.secureDesc}</p>
-            </div>
-          </div>
-        </section>
-        {/* =================================================
-            STATS
-        ================================================= */}
-        <section className="stats-section">
-          <div className="stat">
-            <h3>{memories.length}+</h3>
-
-            <p>{ui.memoriesSaved}</p>
-          </div>
-
-          <div className="stat">
-            <h3>3</h3>
-
-            <p>{ui.memoryFormats}</p>
-          </div>
-
-          <div className="stat">
-            <h3>AI</h3>
-
-            <p>{ui.memoryAssistant}</p>
-          </div>
-
-          <div className="stat">
-            <h3>24/7</h3>
-
-            <p>{ui.storyAvailable}</p>
-          </div>
-        </section>
-        {/* =================================================
-            AI CHAT
-        ================================================= */}
-        <section className="chat-section">
-          <h2>
-            {chatProfileId
-              ? `🧠 Chat with ${
-                  profiles.find(
-                    (profile) => String(profile.id) === String(chatProfileId),
-                  )?.name || "Selected Profile"
-                }`
-              : `🧠 ${ui.talkMemories}`}
-          </h2>
-
-          <p
-            style={{
-              margin: "0 0 14px",
-              fontSize: "14px",
-              fontWeight: 600,
-              opacity: 0.75,
-            }}
-          >
-            🌐 {ui.aiResponses}{" "}
-            {languages.find((item) => item.name === language)?.native ||
-              language}
-          </p>
-          <label htmlFor="chat-profile">Chat with memories of:</label>
-
-          <select
-            id="chat-profile"
-            className="chat-input"
-            value={chatProfileId}
-            onChange={(event) => setChatProfileId(event.target.value)}
-          >
-            <option value="">All my memories</option>
-
-            {profiles.map((profile) => (
-              <option key={profile.id} value={profile.id}>
-                {profile.name}
-              </option>
-            ))}
-          </select>
-          <p
-            style={{
-              margin: "6px 0 14px",
-              fontSize: "13px",
-              opacity: 0.75,
-            }}
-          >
-            {chatProfileId
-              ? "🔒 The AI will search only memories linked to this profile."
-              : "💭 The AI can search across all your saved memories."}
-          </p>
-          <textarea
-            className="chat-input"
-            placeholder={ui.askPlaceholder}
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && !event.shiftKey) {
-                event.preventDefault();
-                askAI();
-              }
-            }}
-          />
-
-          <button
-            type="button"
-            className="primary-button"
-            onClick={() => askAI()}
-            disabled={loadingAI}
-          >
-            {loadingAI ? ui.thinking : ui.askAI}
-          </button>
-
-          <div className="quick-questions">
-            {ui.quickQuestions.map((item) => (
-              <button
-                type="button"
-                key={item}
-                className="quick-button"
-                onClick={() => askAI(item)}
-              >
-                👤 {item}
-              </button>
-            ))}
-          </div>
-
-          <div className="chat-history">
-            {messages.length === 0 ? (
-              <div className="empty-chat">
-                <h3>🤖 Living Memory AI</h3>
-
-                <p>{ui.askAnything}</p>
-              </div>
-            ) : (
-              messages.map((message, index) => (
-                <div
-                  key={`${message.role}-${index}`}
-                  className={
-                    message.role === "user"
-                      ? "chat-message user-message"
-                      : "chat-message ai-message"
-                  }
-                >
-                  <strong>
-                    {message.role === "user"
-                      ? `👤 ${ui.you}`
-                      : "🤖 Living Memory AI"}
-                  </strong>
-                  {message.role === "assistant" && (
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      onClick={() => speakAIResponse(message.content)}
-                    >
-                      🔊 Listen
-                    </button>
-                  )}
-                  <p>{message.content}</p>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
-        {/* =================================================
-            SEARCH
-        ================================================= */}
-        <section className="search-section">
-          <h2>🔎 {ui.findMemory}</h2>
-
-          <div className="memory-search">
-            <input
-              type="text"
-              placeholder={ui.searchPlaceholder}
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-            />
-          </div>
-
-          {search.trim() && (
-            <div className="search-results">
-              <h3>
-                {ui.searchResultsFor} "{search}"
-              </h3>
-
-              {searchResults.length === 0 ? (
-                <p className="empty">{ui.noResults}</p>
-              ) : (
-                <div className="memory-grid">
-                  {searchResults.map((memory) => (
-                    <article className="memory-card" key={memory.id}>
-                      {memory.image_url && (
-                        <img
-                          src={`${API}${memory.image_url}`}
-                          alt={memory.title}
-                          className="memory-image"
-                        />
-                      )}
-
-                      <span className="memory-type">
-                        {memory.memory_type || "personal"}
-                      </span>
-
-                      <h3>{memory.title}</h3>
-
-                      <p>{memory.content}</p>
-
-                      <div className="memory-actions">
-                        <button
-                          type="button"
-                          className="edit-button"
-                          onClick={() => startEditingMemory(memory)}
-                        >
-                          {ui.edit}
-                        </button>
-
-                        <button
-                          type="button"
-                          className="delete-button"
-                          onClick={() => handleDeleteMemory(memory.id)}
-                        >
-                          {ui.delete}
-                        </button>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-        {/* =================================================
-            EDIT MEMORY
-        ================================================= */}
-        {editingMemoryId && (
-          <section className="card">
-            <h2>{ui.editMemory}</h2>
-
-            <form onSubmit={handleUpdateMemory}>
-              <input
-                type="text"
-                placeholder={ui.titlePlaceholder}
-                value={editTitle}
-                onChange={(event) => setEditTitle(event.target.value)}
-                required
-              />
-
-              <textarea
-                placeholder={ui.memoryPlaceholder}
-                value={editContent}
-                onChange={(event) => setEditContent(event.target.value)}
-                required
-              />
-
-              <select
-                value={editMemoryType}
-                onChange={(event) => setEditMemoryType(event.target.value)}
-              >
-                {memoryTypes.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-              <label htmlFor="edit-profile">Linked Profile:</label>
-              <select
-                id="edit-profile"
-                value={editProfileId}
-                onChange={(event) => setEditProfileId(event.target.value)}
-              >
-                <option value="">No profile assigned</option>
-                {profiles.map((profile) => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.name}
-                  </option>
-                ))}
-              </select>
-
-              <div className="memory-actions">
-                <button
-                  type="submit"
-                  className="primary-button"
-                  disabled={editLoading}
-                >
-                  {editLoading ? ui.saving : ui.saveChanges}
-                </button>
-
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={cancelEditingMemory}
-                >
-                  {ui.cancel}
-                </button>
-              </div>
-            </form>
-
-            {memoryMessage && <p className="message">{memoryMessage}</p>}
-          </section>
-        )}
-        {/* =================================================
-            SAVE MEMORY
-        ================================================= */}
-        <section id="save-memory">
-          <h2>✨ {ui.saveMemory}</h2>
-
-          <form onSubmit={handleSaveMemory}>
-            <input
-              type="text"
-              placeholder={ui.titlePlaceholder}
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              required
-            />
-
-            <textarea
-              placeholder={ui.memoryPlaceholder}
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-              required
-            />
-
-            <VoiceRecorder
-              onTextGenerated={(text) =>
-                setContent((previous) =>
-                  previous ? `${previous} ${text}` : text,
-                )
-              }
-              onAudioRecorded={(audioBlob) => {
-                setSelectedAudio(audioBlob);
-
-                setMemoryMessage(ui.voiceRecorded);
-              }}
-            />
-
-            {selectedAudio && <p className="message">{ui.voiceReady}</p>}
-
-            <div className="photo-upload">
-              <label htmlFor="memory-image" className="photo-upload-label">
-                {ui.addPhoto}
-              </label>
-
-              <input
-                id="memory-image"
-                type="file"
-                accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                onChange={handleImageSelect}
-              />
-
-              {imagePreview && (
-                <div className="image-preview">
-                  <img src={imagePreview} alt="Memory preview" />
-
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={clearSelectedImage}
-                  >
-                    {ui.removePhoto}
-                  </button>
-                </div>
-              )}
-            </div>
-            <label htmlFor="memory-profile">Whose memory is this?</label>
-
-            <select
-              id="memory-profile"
-              value={selectedProfileId}
-              onChange={(event) => setSelectedProfileId(event.target.value)}
-            >
-              <option value="">General memory — no profile</option>
-
-              {profiles.map((profile) => (
-                <option key={profile.id} value={profile.id}>
-                  {profile.name} ({profile.relationship_type})
-                </option>
-              ))}
-            </select>
-            <select
-              value={memoryType}
-              onChange={(event) => setMemoryType(event.target.value)}
-            >
-              {memoryTypes.map((type) => (
-                <option key={type.value} value={type.value}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-
-            <button
-              type="submit"
-              className="primary-button"
-              disabled={saving || uploadingImage || uploadingAudio}
-            >
-              {saving || uploadingImage || uploadingAudio ? ui.saving : ui.save}
-            </button>
-          </form>
-
-          {memoryMessage && <p className="message">{memoryMessage}</p>}
-        </section>
-        {/* =================================================
-            MY MEMORIES
-        ================================================= */}
-        <section id="memories">
-          <div className="section-heading">
-            <h2>💜 {ui.myMemories}</h2>
-
+        <div className="lm-sidebar-label">{wt.workspace}</div>
+        <nav className="lm-side-nav" aria-label={ui.mainNavigation}>
+          {dashboardNavItems.map((item) => (
             <button
               type="button"
-              className="refresh-button"
-              onClick={loadMemories}
+              key={item.id}
+              className={`lm-nav-item ${activePage === item.id ? "active" : ""}`}
+              aria-current={activePage === item.id ? "page" : undefined}
+              onClick={() => {
+                setActivePage(item.id);
+                setSidebarOpen(false);
+              }}
             >
-              {ui.refresh}
+              <span className="lm-nav-icon">{item.icon}</span>
+              <span>{item.label}</span>
+              {activePage === item.id && <span className="lm-nav-indicator" />}
             </button>
+          ))}
+        </nav>
+
+        <div className="lm-sidebar-bottom">
+          <div className="lm-sidebar-note">
+            <span>✦</span>
+            <p>{wt.sidebarNote}</p>
           </div>
+          <button type="button" className="lm-logout" onClick={handleLogout}>
+            <span>↪</span>
+            {ui.logout}
+          </button>
+        </div>
+      </aside>
+
+      {sidebarOpen && (
+        <button
+          type="button"
+          className="lm-sidebar-backdrop"
+          aria-label={wt.closeNavigation}
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <div className="lm-main-column">
+        <header className="lm-topbar">
           <button
             type="button"
-            className="secondary-button"
-            onClick={() => setActiveProfileFilter(null)}
+            className="lm-mobile-menu"
+            aria-label={wt.openNavigation}
+            onClick={() => setSidebarOpen((open) => !open)}
           >
-            Show All Memories
+            ☰
           </button>
-          <div className="memory-filters">
-            <div className="memory-filters-header">
-              <div>
-                <h3>Filter memories</h3>
-                <p>Find moments by category or date range.</p>
-              </div>
-              <button
-                type="button"
-                className="clear-filters-button"
-                onClick={() => {
-                  setMemoryTypeFilter("");
-                  setDateFromFilter("");
-                  setDateToFilter("");
-                }}
+          <div className="lm-page-heading">
+            <span className="lm-breadcrumb">{wt.breadcrumb}</span>
+            <h1>{dashboardPageTitle}</h1>
+          </div>
+          <div className="lm-topbar-actions">
+            <label className="lm-language-control">
+              <span>🌐</span>
+              <select
+                value={language}
+                onChange={handleLanguageChange}
+                aria-label={wt.selectLanguage}
               >
-                ↺ Clear all
-              </button>
+                {languages.map((item) => (
+                  <option key={item.code} value={item.name}>
+                    {item.native}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="lm-user-chip">
+              <span className="lm-user-avatar">
+                {(authUsername || authEmail || "U").charAt(0).toUpperCase()}
+              </span>
+              <span>{authUsername || authEmail || ui.myAccount}</span>
             </div>
+          </div>
+        </header>
 
-            <div className="memory-filter-fields">
-              <div className="memory-filter-field">
-                <label htmlFor="memory-profile-filter">Profile</label>
+        <main className="lm-content">
+          {activePage === "capsules" && (
+            <TimeCapsules
+              apiBaseUrl={API}
+              userId={userId}
+              profiles={profiles}
+              memories={memories}
+              language={language}
+            />
+          )}
+          {activePage === "grandparents" && (
+            <GrandparentsMode
+              apiBaseUrl={API}
+              userId={userId}
+              memories={memories}
+              profiles={profiles}
+              language={language}
+            />
+          )}
 
-                <select
-                  id="memory-profile-filter"
-                  value={
-                    activeProfileFilter === null
-                      ? ""
-                      : String(activeProfileFilter)
-                  }
-                  onChange={(event) => {
-                    const value = event.target.value;
+          {activePage === "dashboard" && (
+            <section className="lm-dashboard-page">
+              <div className="lm-welcome">
+                <div>
+                  <span className="lm-eyebrow">{wt.personalMemorySpace}</span>
+                  <h2>
+                    {wt.welcomeBack}
+                    {authUsername ? `, ${authUsername}` : ""} 💜
+                  </h2>
+                  <p>{wt.welcomeDescription}</p>
+                </div>
+                <button
+                  type="button"
+                  className="primary-button lm-add-main"
+                  onClick={() => setActivePage("memories")}
+                >
+                  {wt.addMemory}
+                </button>
+              </div>
 
-                    setActiveProfileFilter(
-                      value === ""
-                        ? null
-                        : value === "unassigned"
-                          ? "unassigned"
-                          : Number(value),
-                    );
+              <div className="lm-stat-grid">
+                <button
+                  type="button"
+                  className="lm-stat-card"
+                  onClick={() => setActivePage("memories")}
+                >
+                  <span className="lm-stat-icon">✧</span>
+                  <span className="lm-stat-value">{memories.length}</span>
+                  <span className="lm-stat-label">{wt.totalMemories}</span>
+                  <span className="lm-stat-hint">{wt.openMemoryLibrary}</span>
+                </button>
+                <button
+                  type="button"
+                  className="lm-stat-card"
+                  onClick={() => setActivePage("profiles")}
+                >
+                  <span className="lm-stat-icon">♧</span>
+                  <span className="lm-stat-value">{profiles.length}</span>
+                  <span className="lm-stat-label">{wt.customProfiles}</span>
+                  <span className="lm-stat-hint">{wt.explorePeople}</span>
+                </button>
+                <button
+                  type="button"
+                  className="lm-stat-card"
+                  onClick={() => setActivePage("photos")}
+                >
+                  <span className="lm-stat-icon">▧</span>
+                  <span className="lm-stat-value">
+                    {memories.filter((memory) => memory.image_url).length}
+                  </span>
+                  <span className="lm-stat-label">{wt.photoMemories}</span>
+                  <span className="lm-stat-hint">{wt.openPhotoGallery}</span>
+                </button>
+                <button
+                  type="button"
+                  className="lm-stat-card"
+                  onClick={() => setActivePage("voice")}
+                >
+                  <span className="lm-stat-icon">♫</span>
+                  <span className="lm-stat-value">
+                    {memories.filter((memory) => memory.audio_url).length}
+                  </span>
+                  <span className="lm-stat-label">{wt.voiceMemories}</span>
+                  <span className="lm-stat-hint">{wt.listenRecordings}</span>
+                </button>
+              </div>
+
+              <div className="lm-dashboard-columns">
+                <section className="lm-panel">
+                  <div className="lm-panel-heading">
+                    <div>
+                      <span className="lm-eyebrow">{wt.yourCollection}</span>
+                      <h3>{wt.recentMemories}</h3>
+                    </div>
+                    <button
+                      type="button"
+                      className="lm-text-button"
+                      onClick={() => setActivePage("memories")}
+                    >
+                      {wt.viewAll}
+                    </button>
+                  </div>
+                  {memories.length === 0 ? (
+                    <div className="lm-empty">
+                      <span>✧</span>
+                      <h4>{wt.storyStarts}</h4>
+                      <p>{wt.saveFirstMemory}</p>
+                      <button
+                        type="button"
+                        className="primary-button"
+                        onClick={() => setActivePage("memories")}
+                      >
+                        {wt.createFirstMemory}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="lm-recent-list">
+                      {[...memories]
+                        .sort(
+                          (a, b) =>
+                            new Date(b.created_at || 0).getTime() -
+                            new Date(a.created_at || 0).getTime(),
+                        )
+                        .slice(0, 5)
+                        .map((memory) => (
+                          <button
+                            type="button"
+                            className="lm-recent-item"
+                            key={memory.id}
+                            onClick={() => {
+                              setSearch(memory.title || "");
+                              setActivePage("memories");
+                            }}
+                          >
+                            <span className="lm-recent-symbol">
+                              {memory.image_url
+                                ? "▧"
+                                : memory.audio_url
+                                  ? "♫"
+                                  : "✧"}
+                            </span>
+                            <span className="lm-recent-copy">
+                              <strong>{memory.title}</strong>
+                              <small>
+                                {ui[memory.memory_type] ||
+                                  memory.memory_type ||
+                                  ui.personal}
+                                {memory.created_at
+                                  ? ` · ${new Date(memory.created_at).toLocaleDateString(languageLocales[language] || "en-US")}`
+                                  : ""}
+                              </small>
+                            </span>
+                            <span className="lm-recent-arrow">→</span>
+                          </button>
+                        ))}
+                    </div>
+                  )}
+                </section>
+
+                <section className="lm-panel lm-shortcuts">
+                  <span className="lm-eyebrow">{wt.jumpBackIn}</span>
+                  <h3>{wt.quickAccess}</h3>
+                  <button type="button" onClick={() => setActivePage("chat")}>
+                    <span>✉</span>
+                    <div>
+                      <strong>{wt.askYourAI}</strong>
+                      <small>{wt.talkToSavedMemories}</small>
+                    </div>
+                    <b>→</b>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActivePage("profiles")}
+                  >
+                    <span>♧</span>
+                    <div>
+                      <strong>{wt.peopleProfiles}</strong>
+                      <small>{wt.exploreMemoriesByPerson}</small>
+                    </div>
+                    <b>→</b>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActivePage("timeline")}
+                  >
+                    <span>◷</span>
+                    <div>
+                      <strong>{wt.memoryTimeline}</strong>
+                      <small>{wt.revisitByDate}</small>
+                    </div>
+                    <b>→</b>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActivePage("settings")}
+                  >
+                    <span>⚙</span>
+                    <div>
+                      <strong>{wt.preferences}</strong>
+                      <small>{wt.manageLanguageAccount}</small>
+                    </div>
+                    <b>→</b>
+                  </button>
+                </section>
+              </div>
+            </section>
+          )}
+
+          {activePage === "chat" && (
+            <div className="lm-page-stack">
+              {/* =================================================
+            AI CHAT
+        ================================================= */}
+              <section className="chat-section">
+                <h2>
+                  {chatProfileId
+                    ? `🧠 Chat with ${
+                        profiles.find(
+                          (profile) =>
+                            String(profile.id) === String(chatProfileId),
+                        )?.name || wt.selectedProfile
+                      }`
+                    : `🧠 ${ui.talkMemories}`}
+                </h2>
+
+                <p
+                  style={{
+                    margin: "0 0 14px",
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    opacity: 0.75,
                   }}
                 >
-                  <option value="">All profiles</option>
-                  <option value="unassigned">Unassigned memories</option>
+                  🌐 {ui.aiResponses}{" "}
+                  {languages.find((item) => item.name === language)?.native ||
+                    language}
+                </p>
+                <label htmlFor="chat-profile">{wt.chatWith}</label>
+
+                <select
+                  id="chat-profile"
+                  className="chat-input"
+                  value={chatProfileId}
+                  onChange={(event) => setChatProfileId(event.target.value)}
+                >
+                  <option value="">{wt.allMyMemories}</option>
 
                   {profiles.map((profile) => (
                     <option key={profile.id} value={profile.id}>
@@ -3033,524 +3496,1258 @@ function App() {
                     </option>
                   ))}
                 </select>
-              </div>
-              <div className="memory-filter-field">
-                <label htmlFor="memory-type-filter">Category</label>
-                <select
-                  id="memory-type-filter"
-                  value={memoryTypeFilter}
-                  onChange={(event) => setMemoryTypeFilter(event.target.value)}
+                <p
+                  style={{
+                    margin: "6px 0 14px",
+                    fontSize: "13px",
+                    opacity: 0.75,
+                  }}
                 >
-                  <option value="">All categories</option>
-                  <option value="personal">Personal</option>
-                  <option value="college">College</option>
-                  <option value="family">Family</option>
-                  <option value="friends">Friends</option>
-                  <option value="achievement">Achievement</option>
-                  <option value="project">Project</option>
-                  <option value="food">Food</option>
-                  <option value="travel">Travel</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div className="memory-filter-field">
-                <label htmlFor="memory-date-from">From date</label>
-                <input
-                  id="memory-date-from"
-                  type="date"
-                  value={dateFromFilter}
-                  onChange={(event) => setDateFromFilter(event.target.value)}
+                  {chatProfileId ? wt.aiSearchOnlyProfile : wt.aiSearchAll}
+                </p>
+                <textarea
+                  className="chat-input"
+                  placeholder={ui.askPlaceholder}
+                  value={question}
+                  onChange={(event) => setQuestion(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" && !event.shiftKey) {
+                      event.preventDefault();
+                      askAI();
+                    }
+                  }}
                 />
-              </div>
 
-              <div className="memory-filter-field">
-                <label htmlFor="memory-date-to">To date</label>
-                <input
-                  id="memory-date-to"
-                  type="date"
-                  value={dateToFilter}
-                  onChange={(event) => setDateToFilter(event.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="memory-results-count">
-            Showing <strong>{visibleMemories.length}</strong>{" "}
-            {visibleMemories.length === 1 ? "memory" : "memories"}
-          </div>
-          {memories.length === 0 ? (
-            <div className="empty">
-              <h3>{ui.waiting}</h3>
-              <p>{ui.firstMemory}</p>
-            </div>
-          ) : visibleMemories.length === 0 ? (
-            <div className="empty">
-              <h3>No matching memories</h3>
-              <p>Try changing the category or date filters.</p>
-            </div>
-          ) : (
-            <div className="memory-grid">
-              {visibleMemories.map((memory) => (
-                <article className="memory-card" key={memory.id}>
-                  {memory.image_url && (
-                    <img
-                      src={`${API}${memory.image_url}`}
-                      alt={memory.title}
-                      className="memory-image"
-                    />
-                  )}
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => askAI()}
+                  disabled={loadingAI}
+                >
+                  {loadingAI ? ui.thinking : ui.askAI}
+                </button>
 
-                  {memory.audio_url && (
-                    <audio
-                      controls
-                      className="memory-audio"
-                      src={`${API}${memory.audio_url}`}
-                    />
-                  )}
-
-                  <span className="memory-type">
-                    {memory.memory_type || "personal"}
-                  </span>
-                  {memory.profile_id && (
-                    <span className="memory-type">
-                      👤{" "}
-                      {profiles.find(
-                        (profile) =>
-                          Number(profile.id) === Number(memory.profile_id),
-                      )?.name || "Linked profile"}
-                    </span>
-                  )}
-                  <h3>{memory.title}</h3>
-
-                  <p>{memory.content}</p>
-
-                  <div className="memory-meta">
-                    <span>{memory.memory_type || "personal"}</span>
-
-                    {memory.created_at && (
-                      <span>
-                        {new Date(memory.created_at).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="memory-actions">
+                <div className="quick-questions">
+                  {ui.quickQuestions.map((item) => (
                     <button
                       type="button"
-                      className="edit-button"
-                      onClick={() => startEditingMemory(memory)}
+                      key={item}
+                      className="quick-button"
+                      onClick={() => askAI(item)}
                     >
-                      {ui.edit}
+                      👤 {item}
                     </button>
+                  ))}
+                </div>
 
-                    <button
-                      type="button"
-                      className="delete-button"
-                      onClick={() => handleDeleteMemory(memory.id)}
-                    >
-                      {ui.delete}
-                    </button>
-                  </div>
-                </article>
-              ))}
+                <div className="chat-history">
+                  {messages.length === 0 ? (
+                    <div className="empty-chat">
+                      <h3>🤖 Living Memory AI</h3>
+
+                      <p>{ui.askAnything}</p>
+                    </div>
+                  ) : (
+                    messages.map((message, index) => (
+                      <div
+                        key={`${message.role}-${index}`}
+                        className={
+                          message.role === "user"
+                            ? "chat-message user-message"
+                            : "chat-message ai-message"
+                        }
+                      >
+                        <strong>
+                          {message.role === "user"
+                            ? `👤 ${ui.you}`
+                            : "🤖 Living Memory AI"}
+                        </strong>
+                        {message.role === "assistant" && (
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            onClick={() => speakAIResponse(message.content)}
+                          >
+                            {wt.listen}
+                          </button>
+                        )}
+                        <p>{message.content}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
             </div>
           )}
-        </section>
-        {/* =================================================
-            PROFILES
+          {activePage === "memories" && (
+            <div className="lm-page-stack">
+              {/* =================================================
+            SEARCH
         ================================================= */}
-        {/* =================================================
-            PROFILES
-        ================================================= */}
+              <section className="search-section">
+                <h2>🔎 {ui.findMemory}</h2>
 
-        <section id="profiles" className="profiles-section">
-          <div className="section-heading">
-            <span className="section-label">{profileUi.label}</span>
+                <div className="memory-search">
+                  <input
+                    type="text"
+                    placeholder={ui.searchPlaceholder}
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                  />
+                </div>
 
-            <h2>{profileUi.title}</h2>
+                {search.trim() && (
+                  <div className="search-results">
+                    <h3>
+                      {ui.searchResultsFor} "{search}"
+                    </h3>
 
-            <p>{profileUi.description}</p>
-          </div>
+                    {searchResults.length === 0 ? (
+                      <p className="empty">{ui.noResults}</p>
+                    ) : (
+                      <div className="memory-grid">
+                        {searchResults.map((memory) => (
+                          <article className="memory-card" key={memory.id}>
+                            {memory.image_url && (
+                              <AuthenticatedImage
+                                src={`${API}${memory.image_url}`}
+                                alt={memory.title}
+                                className="memory-image"
+                              />
+                            )}
 
-          <div className="profiles-grid">
-            <article className="profile-card">
-              <div className="profile-avatar">👩</div>
+                            <span className="memory-type">
+                              {ui[memory.memory_type] ||
+                                memory.memory_type ||
+                                ui.personal}
+                            </span>
 
-              <h3>{profileMoreUi.mom}</h3>
+                            <h3>{memory.title}</h3>
 
-              <span className="profile-relation">{profileUi.mother}</span>
+                            <p>{memory.content}</p>
 
-              <p>{profileUi.motherDescription}</p>
+                            <div className="memory-actions">
+                              <button
+                                type="button"
+                                className="edit-button"
+                                onClick={() => startEditingMemory(memory)}
+                              >
+                                {ui.edit}
+                              </button>
 
-              <button
-                type="button"
-                className="primary-button"
-                onClick={() => {
-                  setActiveProfileFilter(null);
-                  setSearch("Mom");
-
-                  document.getElementById("memories")?.scrollIntoView({
-                    behavior: "smooth",
-                  });
-                }}
-              >
-                {profileUi.viewMemories}
-              </button>
-            </article>
-
-            <article className="profile-card">
-              <div className="profile-avatar">👨</div>
-
-              <h3>{profileMoreUi.dad}</h3>
-
-              <span className="profile-relation">{profileUi.father}</span>
-
-              <p>{profileUi.fatherDescription}</p>
-
-              <button
-                type="button"
-                className="primary-button"
-                onClick={() => {
-                  setSearch("Dad");
-
-                  document.getElementById("memories")?.scrollIntoView({
-                    behavior: "smooth",
-                  });
-                }}
-              >
-                {profileUi.viewMemories}
-              </button>
-            </article>
-
-            {profiles.map((profile) => (
-              <article className="profile-card" key={profile.id}>
-                <div className="profile-avatar">👤</div>
-
-                <h3>{profile.name}</h3>
-
-                <span className="profile-relation">
-                  {profile.relationship_type}
-                </span>
-
-                <p>{profile.description || profileMoreUi.defaultDescription}</p>
-
-                <button
-                  type="button"
-                  className="primary-button"
-                  onClick={() => generateIdentitySummary(profile)}
-                  disabled={identityLoadingId === profile.id}
-                >
-                  {identityLoadingId === profile.id
-                    ? profileMoreUi.generatingSummary
-                    : profileUi.generateSummary}
-                </button>
-
-                {identityErrors[profile.id] && (
-                  <p className="message">{identityErrors[profile.id]}</p>
-                )}
-
-                {identitySummaries[profile.id] && (
-                  <div className="identity-summary">
-                    <h4>{profileMoreUi.livingIdentity}</h4>
-                    <p>{identitySummaries[profile.id]}</p>
+                              <button
+                                type="button"
+                                className="delete-button"
+                                onClick={() => handleDeleteMemory(memory.id)}
+                              >
+                                {ui.delete}
+                              </button>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
+              </section>
+              {/* =================================================
+            EDIT MEMORY
+        ================================================= */}
+              {editingMemoryId && (
+                <section className="card">
+                  <h2>{ui.editMemory}</h2>
+
+                  <form onSubmit={handleUpdateMemory}>
+                    <input
+                      type="text"
+                      placeholder={ui.titlePlaceholder}
+                      value={editTitle}
+                      onChange={(event) => setEditTitle(event.target.value)}
+                      required
+                    />
+
+                    <textarea
+                      placeholder={ui.memoryPlaceholder}
+                      value={editContent}
+                      onChange={(event) => setEditContent(event.target.value)}
+                      required
+                    />
+
+                    <select
+                      value={editMemoryType}
+                      onChange={(event) =>
+                        setEditMemoryType(event.target.value)
+                      }
+                    >
+                      {memoryTypes.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+                    <label htmlFor="edit-profile">{wt.linkedProfile}</label>
+                    <select
+                      id="edit-profile"
+                      value={editProfileId}
+                      onChange={(event) => setEditProfileId(event.target.value)}
+                    >
+                      <option value="">{wt.noProfileAssigned}</option>
+                      {profiles.map((profile) => (
+                        <option key={profile.id} value={profile.id}>
+                          {profile.name}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div className="memory-privacy-section">
+                      <h3>{wt.hideMemoryFrom}</h3>
+                      <p>{wt.privacyDescription}</p>
+
+                      {profiles.length === 0 ? (
+                        <p>{wt.createProfileForPrivacy}</p>
+                      ) : (
+                        profiles.map((profile) => (
+                          <label
+                            key={profile.id}
+                            className="privacy-profile-option"
+                          >
+                            <input
+                              type="checkbox"
+                              value={profile.id}
+                              checked={editHiddenFromProfileIds.includes(
+                                Number(profile.id),
+                              )}
+                              onChange={(event) => {
+                                const profileId = Number(event.target.value);
+
+                                setEditHiddenFromProfileIds((previous) =>
+                                  event.target.checked
+                                    ? [...new Set([...previous, profileId])]
+                                    : previous.filter((id) => id !== profileId),
+                                );
+                              }}
+                            />
+                            {ui.hideFrom} {profile.name}
+                          </label>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="memory-actions">
+                      <button
+                        type="submit"
+                        className="primary-button"
+                        disabled={editLoading}
+                      >
+                        {editLoading ? ui.saving : ui.saveChanges}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={cancelEditingMemory}
+                      >
+                        {ui.cancel}
+                      </button>
+                    </div>
+                  </form>
+
+                  {memoryMessage && <p className="message">{memoryMessage}</p>}
+                </section>
+              )}
+              {/* =================================================
+            SAVE MEMORY
+        ================================================= */}
+              <section id="save-memory">
+                <h2>✨ {ui.saveMemory}</h2>
+
+                <form onSubmit={handleSaveMemory}>
+                  <input
+                    type="text"
+                    placeholder={ui.titlePlaceholder}
+                    value={title}
+                    onChange={(event) => setTitle(event.target.value)}
+                    required
+                  />
+
+                  <textarea
+                    placeholder={ui.memoryPlaceholder}
+                    value={content}
+                    onChange={(event) => setContent(event.target.value)}
+                    required
+                  />
+
+                  <VoiceRecorder
+                    transcriptionLanguage={
+                      languages.find((item) => item.name === language)?.code ||
+                      "en"
+                    }
+                    buttonLabel={wt.recordMemoryButton}
+                    transcriptLabel={wt.transcriptAdded}
+                    onTextGenerated={(text) =>
+                      setContent((previous) =>
+                        previous ? `${previous} ${text}` : text,
+                      )
+                    }
+                    onAudioRecorded={(audioBlob) => {
+                      setSelectedAudio(audioBlob);
+
+                      setMemoryMessage(ui.voiceRecorded);
+                    }}
+                  />
+
+                  {selectedAudio && <p className="message">{ui.voiceReady}</p>}
+
+                  <div className="photo-upload">
+                    <label
+                      htmlFor="memory-image"
+                      className="photo-upload-label"
+                    >
+                      {ui.addPhoto}
+                    </label>
+
+                    <input
+                      id="memory-image"
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                      onChange={handleImageSelect}
+                    />
+
+                    {imagePreview && (
+                      <div className="image-preview">
+                        <img src={imagePreview} alt="Memory preview" />
+
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={clearSelectedImage}
+                        >
+                          {ui.removePhoto}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  <label htmlFor="memory-profile">{wt.whoseMemory}</label>
+
+                  <select
+                    id="memory-profile"
+                    value={selectedProfileId}
+                    onChange={(event) =>
+                      setSelectedProfileId(event.target.value)
+                    }
+                  >
+                    <option value="">{wt.generalMemory}</option>
+
+                    {profiles.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.name} ({profile.relationship_type})
+                      </option>
+                    ))}
+                  </select>
+                  <div className="memory-privacy-section">
+                    <h3>{wt.hideMemoryFrom}</h3>
+                    <p>{wt.privacyDescription}</p>
+
+                    {profiles.map((profile) => (
+                      <label
+                        key={profile.id}
+                        className="privacy-profile-option"
+                      >
+                        <input
+                          type="checkbox"
+                          value={profile.id}
+                          checked={hiddenFromProfileIds.includes(
+                            Number(profile.id),
+                          )}
+                          onChange={(event) => {
+                            const profileId = Number(event.target.value);
+
+                            setHiddenFromProfileIds((previous) =>
+                              event.target.checked
+                                ? [...previous, profileId]
+                                : previous.filter((id) => id !== profileId),
+                            );
+                          }}
+                        />
+                        {ui.hideFrom} {profile.name}
+                      </label>
+                    ))}
+                  </div>
+                  <select
+                    value={memoryType}
+                    onChange={(event) => setMemoryType(event.target.value)}
+                  >
+                    {memoryTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="submit"
+                    className="primary-button"
+                    disabled={saving || uploadingImage || uploadingAudio}
+                  >
+                    {saving || uploadingImage || uploadingAudio
+                      ? ui.saving
+                      : ui.save}
+                  </button>
+                </form>
+
+                {memoryMessage && <p className="message">{memoryMessage}</p>}
+              </section>
+              {/* =================================================
+            MY MEMORIES
+        ================================================= */}
+              <section id="memories">
+                <div className="section-heading">
+                  <h2>💜 {ui.myMemories}</h2>
+
+                  <button
+                    type="button"
+                    className="refresh-button"
+                    onClick={loadMemories}
+                  >
+                    {ui.refresh}
+                  </button>
+                </div>
                 <button
                   type="button"
-                  className="primary-button"
-                  onClick={() => generateLifeStory(profile)}
-                  disabled={lifeStoryLoadingId === profile.id}
+                  className="secondary-button"
+                  onClick={() => setActiveProfileFilter(null)}
                 >
-                  {lifeStoryLoadingId === profile.id
-                    ? profileMoreUi.writingLifeStory
-                    : profileUi.generateLifeStory}
+                  {wt.showAllMemories}
                 </button>
+                <div className="memory-filters">
+                  <div className="memory-filters-header">
+                    <div>
+                      <h3>{wt.filterMemories}</h3>
+                      <p>{wt.filterDescription}</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="clear-filters-button"
+                      onClick={() => {
+                        setMemoryTypeFilter("");
+                        setDateFromFilter("");
+                        setDateToFilter("");
+                      }}
+                    >
+                      {wt.clearAll}
+                    </button>
+                  </div>
 
-                {lifeStoryErrors[profile.id] && (
-                  <p className="message">{lifeStoryErrors[profile.id]}</p>
+                  <div className="memory-filter-fields">
+                    <div className="memory-filter-field">
+                      <label htmlFor="memory-profile-filter">
+                        {wt.profile}
+                      </label>
+
+                      <select
+                        id="memory-profile-filter"
+                        value={
+                          activeProfileFilter === null
+                            ? ""
+                            : String(activeProfileFilter)
+                        }
+                        onChange={(event) => {
+                          const value = event.target.value;
+
+                          setActiveProfileFilter(
+                            value === ""
+                              ? null
+                              : value === "unassigned"
+                                ? "unassigned"
+                                : Number(value),
+                          );
+                        }}
+                      >
+                        <option value="">{wt.allProfiles}</option>
+                        <option value="unassigned">
+                          {wt.unassignedMemories}
+                        </option>
+
+                        {profiles.map((profile) => (
+                          <option key={profile.id} value={profile.id}>
+                            {profile.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="memory-filter-field">
+                      <label htmlFor="memory-type-filter">{wt.category}</label>
+                      <select
+                        id="memory-type-filter"
+                        value={memoryTypeFilter}
+                        onChange={(event) =>
+                          setMemoryTypeFilter(event.target.value)
+                        }
+                      >
+                        <option value="">{wt.allCategories}</option>
+                        <option value="personal">{ui.personal}</option>
+                        <option value="college">{ui.college}</option>
+                        <option value="family">{ui.family}</option>
+                        <option value="friends">{ui.friends}</option>
+                        <option value="achievement">{ui.achievement}</option>
+                        <option value="project">{ui.project}</option>
+                        <option value="food">{ui.food}</option>
+                        <option value="travel">{ui.travel}</option>
+                        <option value="other">{ui.other}</option>
+                      </select>
+                    </div>
+
+                    <div className="memory-filter-field">
+                      <label htmlFor="memory-date-from">{wt.fromDate}</label>
+                      <input
+                        id="memory-date-from"
+                        type="date"
+                        value={dateFromFilter}
+                        onChange={(event) =>
+                          setDateFromFilter(event.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div className="memory-filter-field">
+                      <label htmlFor="memory-date-to">{wt.toDate}</label>
+                      <input
+                        id="memory-date-to"
+                        type="date"
+                        value={dateToFilter}
+                        onChange={(event) =>
+                          setDateToFilter(event.target.value)
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="memory-results-count">
+                  {wt.showing} <strong>{visibleMemories.length}</strong>{" "}
+                  {visibleMemories.length === 1 ? wt.memory : wt.memories}
+                </div>
+                {memories.length === 0 ? (
+                  <div className="empty">
+                    <h3>{ui.waiting}</h3>
+                    <p>{ui.firstMemory}</p>
+                  </div>
+                ) : visibleMemories.length === 0 ? (
+                  <div className="empty">
+                    <h3>{wt.noMatchingMemories}</h3>
+                    <p>{wt.changeFilters}</p>
+                  </div>
+                ) : (
+                  <div className="memory-grid">
+                    {visibleMemories.map((memory) => (
+                      <article className="memory-card" key={memory.id}>
+                        {memory.image_url && (
+                          <AuthenticatedImage
+                            src={`${API}${memory.image_url}`}
+                            alt={memory.title}
+                            className="memory-image"
+                          />
+                        )}
+
+                        {memory.audio_url && (
+                          <AuthenticatedAudio
+                            controls
+                            className="memory-audio"
+                            src={`${API}${memory.audio_url}`}
+                          />
+                        )}
+
+                        <span className="memory-type">
+                          {ui[memory.memory_type] ||
+                            memory.memory_type ||
+                            ui.personal}
+                        </span>
+                        {memory.profile_id && (
+                          <span className="memory-type">
+                            👤{" "}
+                            {profiles.find(
+                              (profile) =>
+                                Number(profile.id) ===
+                                Number(memory.profile_id),
+                            )?.name || wt.linkedProfileFallback}
+                          </span>
+                        )}
+                        <h3>{memory.title}</h3>
+
+                        <p>{memory.content}</p>
+
+                        <div className="memory-meta">
+                          <span>
+                            {ui[memory.memory_type] ||
+                              memory.memory_type ||
+                              ui.personal}
+                          </span>
+
+                          {memory.created_at && (
+                            <span>
+                              {new Date(memory.created_at).toLocaleDateString(
+                                languageLocales[language] || "en-US",
+                              )}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="memory-actions">
+                          <button
+                            type="button"
+                            className="edit-button"
+                            onClick={() => startEditingMemory(memory)}
+                          >
+                            {ui.edit}
+                          </button>
+
+                          <button
+                            type="button"
+                            className="delete-button"
+                            onClick={() => handleDeleteMemory(memory.id)}
+                          >
+                            {ui.delete}
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
                 )}
+              </section>
+            </div>
+          )}
+          {activePage === "profiles" && (
+            <div className="lm-page-stack">
+              {/* =================================================
+            PROFILES
+        ================================================= */}
+              {/* =================================================
+            PROFILESF
+        ================================================= */}
 
-                {lifeStories[profile.id] && (
-                  <div className="identity-summary">
-                    <h4>
-                      {profileMoreUi.lifeStoryTitle.replace(
-                        "{name}",
-                        profile.name,
+              <section id="profiles" className="profiles-section">
+                <div className="section-heading">
+                  <span className="section-label">{profileUi.label}</span>
+
+                  <h2>{profileUi.title}</h2>
+
+                  <p>{profileUi.description}</p>
+                </div>
+
+                <div className="profiles-grid">
+                  <article className="profile-card">
+                    <div className="profile-avatar">👩</div>
+
+                    <h3>{profileMoreUi.mom}</h3>
+
+                    <span className="profile-relation">{profileUi.mother}</span>
+
+                    <p>{profileUi.motherDescription}</p>
+
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={() => {
+                        setActiveProfileFilter(null);
+                        setSearch("Mom");
+
+                        setActivePage("memories");
+                      }}
+                    >
+                      {profileUi.viewMemories}
+                    </button>
+                  </article>
+
+                  <article className="profile-card">
+                    <div className="profile-avatar">👨</div>
+
+                    <h3>{profileMoreUi.dad}</h3>
+
+                    <span className="profile-relation">{profileUi.father}</span>
+
+                    <p>{profileUi.fatherDescription}</p>
+
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={() => {
+                        setSearch("Dad");
+
+                        setActivePage("memories");
+                      }}
+                    >
+                      {profileUi.viewMemories}
+                    </button>
+                  </article>
+
+                  {profiles.map((profile) => (
+                    <article className="profile-card" key={profile.id}>
+                      <div className="profile-avatar">👤</div>
+
+                      <h3>{profile.name}</h3>
+
+                      <span className="profile-relation">
+                        {profile.relationship_type}
+                      </span>
+
+                      <p>
+                        {profile.description ||
+                          profileMoreUi.defaultDescription}
+                      </p>
+
+                      <button
+                        type="button"
+                        className="primary-button"
+                        onClick={() => generateLifeStory(profile)}
+                        disabled={lifeStoryLoadingId === profile.id}
+                      >
+                        {lifeStoryLoadingId === profile.id
+                          ? profileMoreUi.writingLifeStory
+                          : profileUi.generateLifeStory}
+                      </button>
+
+                      {lifeStoryErrors[profile.id] && (
+                        <p className="message">{lifeStoryErrors[profile.id]}</p>
                       )}
-                    </h4>
 
-                    <p style={{ whiteSpace: "pre-wrap" }}>
-                      {lifeStories[profile.id]}
-                    </p>
+                      {lifeStories[profile.id] && (
+                        <div className="identity-summary">
+                          <h4>
+                            {profileMoreUi.lifeStoryTitle.replace(
+                              "{name}",
+                              profile.name,
+                            )}
+                          </h4>
+
+                          <p style={{ whiteSpace: "pre-wrap" }}>
+                            {lifeStories[profile.id]}
+                          </p>
+
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            onClick={async () => {
+                              try {
+                                await navigator.clipboard.writeText(
+                                  lifeStories[profile.id],
+                                );
+                                window.alert(profileMoreUi.copySuccess);
+                              } catch {
+                                window.alert(profileMoreUi.copyFail);
+                              }
+                            }}
+                          >
+                            {profileMoreUi.copyLifeStory}
+                          </button>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        className="primary-button"
+                        onClick={() => {
+                          setActiveProfileFilter(profile.id);
+                          setSearch("");
+
+                          setActivePage("memories");
+                        }}
+                      >
+                        {profileUi.viewMemories}
+                      </button>
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        disabled={deletingProfile}
+                        onClick={() => {
+                          setProfileToDelete(profile);
+                          setProfileDeleteError("");
+                        }}
+                      >
+                        {deleteProfileUi.button}{" "}
+                      </button>
+                    </article>
+                  ))}
+
+                  <article className="profile-card add-profile-card">
+                    <div className="profile-avatar">＋</div>
+
+                    <h3>{profileMoreUi.addProfile}</h3>
+
+                    <p>{profileMoreUi.addProfileDescription}</p>
 
                     <button
                       type="button"
                       className="secondary-button"
-                      onClick={async () => {
-                        try {
-                          await navigator.clipboard.writeText(
-                            lifeStories[profile.id],
-                          );
-                          window.alert(profileMoreUi.copySuccess);
-                        } catch {
-                          window.alert(profileMoreUi.copyFail);
-                        }
+                      onClick={() => {
+                        setShowProfileForm(true);
+                        setProfileMessage("");
                       }}
                     >
-                      {profileMoreUi.copyLifeStory}
+                      {profileMoreUi.createProfile}
                     </button>
+                  </article>
+                </div>
+
+                {showProfileForm && (
+                  <form className="card" onSubmit={createProfile}>
+                    <h3>{profileMoreUi.createRelationshipProfile}</h3>
+
+                    <input
+                      type="text"
+                      placeholder={profileMoreUi.name}
+                      value={profileName}
+                      onChange={(event) => setProfileName(event.target.value)}
+                      required
+                    />
+
+                    <input
+                      type="text"
+                      placeholder={profileMoreUi.relationship}
+                      value={profileRelationship}
+                      onChange={(event) =>
+                        setProfileRelationship(event.target.value)
+                      }
+                      required
+                    />
+
+                    <textarea
+                      placeholder={profileMoreUi.description}
+                      value={profileDescription}
+                      onChange={(event) =>
+                        setProfileDescription(event.target.value)
+                      }
+                    />
+
+                    <div className="memory-actions">
+                      <button
+                        type="submit"
+                        className="primary-button"
+                        disabled={profileLoading}
+                      >
+                        {profileLoading
+                          ? profileMoreUi.creating
+                          : profileMoreUi.createProfile.replace("+ ", "")}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => {
+                          setShowProfileForm(false);
+                          setProfileMessage("");
+                        }}
+                      >
+                        {profileMoreUi.cancel}
+                      </button>
+                    </div>
+
+                    {profileMessage && (
+                      <p className="message">{profileMessage}</p>
+                    )}
+                  </form>
+                )}
+              </section>
+            </div>
+          )}
+          {activePage === "timeline" && (
+            <div className="lm-page-stack">
+              {/* =================================================
+            PERSONAL MEMORY TIMELINE
+        ================================================= */}
+              <section className="card">
+                <h2>
+                  {selectedTimelineProfile
+                    ? `🕰️ ${selectedTimelineProfile.name}${timelineUi.personTitleSuffix}`
+                    : timelineProfileId === "unassigned"
+                      ? timelineUi.unassignedTitle
+                      : timelineUi.personalTitle}
+                </h2>
+                <p>{timelineUi.description}</p>
+
+                <label htmlFor="timeline-profile">{timelineUi.showFor}</label>
+                <select
+                  id="timeline-profile"
+                  value={timelineProfileId}
+                  onChange={(event) => setTimelineProfileId(event.target.value)}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    maxWidth: "420px",
+                    padding: "10px 12px",
+                    margin: "8px 0 18px",
+                    borderRadius: "8px",
+                  }}
+                >
+                  <option value="">{timelineUi.allProfiles}</option>
+                  <option value="unassigned">
+                    {timelineUi.unassignedMemories}
+                  </option>
+                  {profiles.map((profile) => (
+                    <option key={profile.id} value={String(profile.id)}>
+                      {profile.name}
+                    </option>
+                  ))}
+                </select>
+
+                {timelineMemories.length === 0 ? (
+                  <p>
+                    {timelineProfileId
+                      ? timelineUi.noLinkedMemories
+                      : timelineUi.noMemories}
+                  </p>
+                ) : (
+                  <div
+                    style={{
+                      marginTop: "20px",
+                      marginLeft: "10px",
+                      paddingLeft: "20px",
+                      borderLeft: "2px solid #a78bfa",
+                    }}
+                  >
+                    {timelineMemories.map((memory) => {
+                      const linkedProfile = profiles.find(
+                        (profile) =>
+                          String(profile.id) === String(memory.profile_id),
+                      );
+
+                      return (
+                        <article
+                          key={`timeline-${memory.id}`}
+                          style={{
+                            marginBottom: "24px",
+                            position: "relative",
+                          }}
+                        >
+                          <div
+                            style={{
+                              position: "absolute",
+                              left: "-27px",
+                              top: "5px",
+                              width: "12px",
+                              height: "12px",
+                              borderRadius: "50%",
+                              background: "#a78bfa",
+                            }}
+                          />
+
+                          <small>
+                            {memory.created_at
+                              ? new Date(memory.created_at).toLocaleDateString(
+                                  languageLocales[language] || "en-US",
+                                )
+                              : timelineUi.dateUnavailable}
+                          </small>
+
+                          <h3>{memory.title}</h3>
+                          <p>{memory.content}</p>
+
+                          <div className="memory-meta">
+                            <span>
+                              {linkedProfile?.name ||
+                                timelineUi.unassignedMemory}
+                            </span>
+                            <span>
+                              {ui[memory.memory_type] ||
+                                memory.memory_type ||
+                                ui.personal}
+                            </span>
+                          </div>
+                        </article>
+                      );
+                    })}
                   </div>
                 )}
+              </section>
+            </div>
+          )}
+
+          {activePage === "voice" && (
+            <section className="lm-panel lm-media-page">
+              <div className="lm-panel-heading">
+                <div>
+                  <span className="lm-eyebrow">{wt.recordedMoments}</span>
+                  <h2>{wt.voiceMemoriesTitle}</h2>
+                  <p>{wt.listenSavedRecordings}</p>
+                </div>
                 <button
                   type="button"
                   className="primary-button"
-                  onClick={() => {
-                    setActiveProfileFilter(profile.id);
-                    setSearch("");
-
-                    document.getElementById("memories")?.scrollIntoView({
-                      behavior: "smooth",
-                    });
-                  }}
+                  onClick={() => setActivePage("memories")}
                 >
-                  {profileUi.viewMemories}
+                  {wt.recordMemory}
                 </button>
-              </article>
-            ))}
+              </div>
+              {memories.filter((memory) => memory.audio_url).length === 0 ? (
+                <div className="lm-empty">
+                  <span>♫</span>
+                  <h4>{wt.noVoiceMemories}</h4>
+                  <p>{wt.useVoiceRecorder}</p>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() => setActivePage("memories")}
+                  >
+                    {wt.goToAddMemory}
+                  </button>
+                </div>
+              ) : (
+                <div className="lm-media-list">
+                  {memories
+                    .filter((memory) => memory.audio_url)
+                    .map((memory) => (
+                      <article className="lm-media-row" key={memory.id}>
+                        <span className="lm-media-icon">♫</span>
+                        <div className="lm-media-details">
+                          <strong>{memory.title}</strong>
+                          <small>
+                            {ui[memory.memory_type] ||
+                              memory.memory_type ||
+                              ui.personal}
+                            {memory.created_at
+                              ? ` · ${new Date(memory.created_at).toLocaleDateString(languageLocales[language] || "en-US")}`
+                              : ""}
+                          </small>
+                          <AuthenticatedAudio
+                            controls
+                            preload="none"
+                            src={`${API}${memory.audio_url}`}
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="lm-text-button"
+                          onClick={() => {
+                            setSearch(memory.title || "");
+                            setActivePage("memories");
+                          }}
+                        >
+                          {wt.viewMemory}
+                        </button>
+                      </article>
+                    ))}
+                </div>
+              )}
+            </section>
+          )}
 
-            <article className="profile-card add-profile-card">
-              <div className="profile-avatar">＋</div>
+          {activePage === "photos" && (
+            <section className="lm-panel lm-media-page">
+              <div className="lm-panel-heading">
+                <div>
+                  <span className="lm-eyebrow">{wt.visualStory}</span>
+                  <h2>{wt.photoMemoriesTitle}</h2>
+                  <p>{wt.browsePhotos}</p>
+                </div>
+                <button
+                  type="button"
+                  className="primary-button"
+                  onClick={() => setActivePage("memories")}
+                >
+                  {wt.addPhoto}
+                </button>
+              </div>
+              {memories.filter((memory) => memory.image_url).length === 0 ? (
+                <div className="lm-empty">
+                  <span>▧</span>
+                  <h4>{wt.noPhotoMemories}</h4>
+                  <p>{wt.addPhotoToGallery}</p>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() => setActivePage("memories")}
+                  >
+                    {wt.goToAddMemory}
+                  </button>
+                </div>
+              ) : (
+                <div className="lm-photo-grid">
+                  {memories
+                    .filter((memory) => memory.image_url)
+                    .map((memory) => (
+                      <article className="lm-photo-card" key={memory.id}>
+                        <AuthenticatedImage
+                          src={`${API}${memory.image_url}`}
+                          alt={memory.title || wt.savedMemory}
+                        />
+                        <div className="lm-photo-caption">
+                          <strong>{memory.title}</strong>
+                          <small>
+                            {memory.created_at
+                              ? new Date(memory.created_at).toLocaleDateString(
+                                  languageLocales[language] || "en-US",
+                                )
+                              : wt.savedMemory}
+                          </small>
+                          <button
+                            type="button"
+                            className="lm-text-button"
+                            onClick={() => {
+                              setSearch(memory.title || "");
+                              setActivePage("memories");
+                            }}
+                          >
+                            {wt.viewMemory}
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                </div>
+              )}
+            </section>
+          )}
 
-              <h3>{profileMoreUi.addProfile}</h3>
+          {activePage === "settings" && (
+            <section className="lm-panel lm-settings-page">
+              <span className="lm-eyebrow">
+                {wt.preferencesTitle.toUpperCase()}
+              </span>
+              <h2>{wt.settings}</h2>
+              <p>{wt.settingsDescription}</p>
+              <div className="lm-setting-row">
+                <div>
+                  <strong>{wt.displayLanguage}</strong>
+                  <small>{wt.chooseLanguage}</small>
+                </div>
+                <select
+                  value={language}
+                  onChange={handleLanguageChange}
+                  aria-label={wt.displayLanguage}
+                >
+                  {languages.map((item) => (
+                    <option key={item.code} value={item.name}>
+                      {item.native}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="lm-setting-row">
+                <div>
+                  <strong>{wt.signedInAccount}</strong>
+                  <small>{wt.currentAccount}</small>
+                </div>
+                <span>{authEmail || ui.currentAccountFallback}</span>
+              </div>
+              <div className="lm-setting-row">
+                <div>
+                  <strong>{wt.accountId}</strong>
+                  <small>{wt.accountIdDescription}</small>
+                </div>
+                <span>{userId ?? "—"}</span>
+              </div>
+              <div className="lm-settings-actions">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setActivePage("dashboard")}
+                >
+                  {wt.backToDashboard}
+                </button>
+                <button
+                  type="button"
+                  className="logout-button"
+                  onClick={handleLogout}
+                >
+                  {ui.logout}
+                </button>
+              </div>
+            </section>
+          )}
+        </main>
 
-              <p>{profileMoreUi.addProfileDescription}</p>
+        {/* =================================================
+          DELETE PROFILE CONFIRMATION
+      ================================================= */}
+
+        {profileToDelete && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 9999,
+              background: "rgba(0, 0, 0, 0.65)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "20px",
+            }}
+          >
+            <div
+              className="card"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-profile-title"
+              style={{
+                width: "100%",
+                maxWidth: "450px",
+                padding: "25px",
+                background: "white",
+                color: "#222",
+                borderRadius: "16px",
+              }}
+            >
+              <h2 id="delete-profile-title">
+                {deleteProfileUi.title(profileToDelete.name)}
+              </h2>
+
+              <p>{deleteProfileUi.description}</p>
+
+              {profileDeleteError && (
+                <p className="message" role="alert">
+                  {profileDeleteError}
+                </p>
+              )}
 
               <button
                 type="button"
                 className="secondary-button"
+                style={{ width: "100%", marginBottom: "12px" }}
+                disabled={deletingProfile}
+                onClick={() => confirmDeleteProfile(false)}
+              >
+                {deleteProfileUi.keep}
+              </button>
+
+              <button
+                type="button"
+                className="secondary-button"
+                style={{
+                  width: "100%",
+                  marginBottom: "12px",
+                  color: "#dc2626",
+                }}
+                disabled={deletingProfile}
+                onClick={() => confirmDeleteProfile(true)}
+              >
+                {deleteProfileUi.deleteAll}
+              </button>
+
+              <button
+                type="button"
+                className="secondary-button"
+                style={{ width: "100%" }}
+                disabled={deletingProfile}
                 onClick={() => {
-                  setShowProfileForm(true);
-                  setProfileMessage("");
+                  setProfileToDelete(null);
+                  setProfileDeleteError("");
                 }}
               >
-                {profileMoreUi.createProfile}
+                {deleteProfileUi.cancel}
               </button>
-            </article>
-          </div>
 
-          {showProfileForm && (
-            <form className="card" onSubmit={createProfile}>
-              <h3>{profileMoreUi.createRelationshipProfile}</h3>
-
-              <input
-                type="text"
-                placeholder={profileMoreUi.name}
-                value={profileName}
-                onChange={(event) => setProfileName(event.target.value)}
-                required
-              />
-
-              <input
-                type="text"
-                placeholder={profileMoreUi.relationship}
-                value={profileRelationship}
-                onChange={(event) => setProfileRelationship(event.target.value)}
-                required
-              />
-
-              <textarea
-                placeholder={profileMoreUi.description}
-                value={profileDescription}
-                onChange={(event) => setProfileDescription(event.target.value)}
-              />
-
-              <div className="memory-actions">
-                <button
-                  type="submit"
-                  className="primary-button"
-                  disabled={profileLoading}
-                >
-                  {profileLoading
-                    ? profileMoreUi.creating
-                    : profileMoreUi.createProfile.replace("+ ", "")}
-                </button>
-
-                <button
-                  type="button"
-                  className="secondary-button"
-                  onClick={() => {
-                    setShowProfileForm(false);
-                    setProfileMessage("");
-                  }}
-                >
-                  {profileMoreUi.cancel}
-                </button>
-              </div>
-
-              {profileMessage && <p className="message">{profileMessage}</p>}
-            </form>
-          )}
-        </section>
-        {/* =================================================
-            PERSONAL MEMORY TIMELINE
-        ================================================= */}
-        <section className="card">
-          <h2>
-            {selectedTimelineProfile
-              ? `🕰️ ${selectedTimelineProfile.name}${timelineUi.personTitleSuffix}`
-              : timelineProfileId === "unassigned"
-                ? timelineUi.unassignedTitle
-                : timelineUi.personalTitle}
-          </h2>
-          <p>{timelineUi.description}</p>
-
-          <label htmlFor="timeline-profile">{timelineUi.showFor}</label>
-          <select
-            id="timeline-profile"
-            value={timelineProfileId}
-            onChange={(event) => setTimelineProfileId(event.target.value)}
-            style={{
-              display: "block",
-              width: "100%",
-              maxWidth: "420px",
-              padding: "10px 12px",
-              margin: "8px 0 18px",
-              borderRadius: "8px",
-            }}
-          >
-            <option value="">{timelineUi.allProfiles}</option>
-            <option value="unassigned">{timelineUi.unassignedMemories}</option>
-            {profiles.map((profile) => (
-              <option key={profile.id} value={String(profile.id)}>
-                {profile.name}
-              </option>
-            ))}
-          </select>
-
-          {timelineMemories.length === 0 ? (
-            <p>
-              {timelineProfileId
-                ? timelineUi.noLinkedMemories
-                : timelineUi.noMemories}
-            </p>
-          ) : (
-            <div
-              style={{
-                marginTop: "20px",
-                marginLeft: "10px",
-                paddingLeft: "20px",
-                borderLeft: "2px solid #a78bfa",
-              }}
-            >
-              {timelineMemories.map((memory) => {
-                const linkedProfile = profiles.find(
-                  (profile) => String(profile.id) === String(memory.profile_id),
-                );
-
-                return (
-                  <article
-                    key={`timeline-${memory.id}`}
-                    style={{
-                      marginBottom: "24px",
-                      position: "relative",
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: "absolute",
-                        left: "-27px",
-                        top: "5px",
-                        width: "12px",
-                        height: "12px",
-                        borderRadius: "50%",
-                        background: "#a78bfa",
-                      }}
-                    />
-
-                    <small>
-                      {memory.created_at
-                        ? new Date(memory.created_at).toLocaleDateString(
-                            languageLocales[language] || "en-US",
-                          )
-                        : timelineUi.dateUnavailable}
-                    </small>
-
-                    <h3>{memory.title}</h3>
-                    <p>{memory.content}</p>
-
-                    <div className="memory-meta">
-                      <span>
-                        {linkedProfile?.name || timelineUi.unassignedMemory}
-                      </span>
-                      <span>
-                        {ui[memory.memory_type] ||
-                          memory.memory_type ||
-                          ui.personal}
-                      </span>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* =================================================
-            ABOUT
-        ================================================= */}
-        <section id="about" className="about-card">
-          <h2>{ui.aboutTitle}</h2>
-
-          <p>{ui.aboutText}</p>
-
-          <div className="feature-grid">
-            <div className="feature-card">
-              <div className="feature-icon">🧠</div>
-
-              <h3>{ui.memoryStorage}</h3>
-
-              <p>{ui.memoryStorageDesc}</p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">🎤</div>
-
-              <h3>{ui.voiceMemory}</h3>
-
-              <p>{ui.voiceMemoryDesc}</p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">📸</div>
-
-              <h3>{ui.photoMemory}</h3>
-
-              <p>{ui.photoMemoryDesc}</p>
-            </div>
-
-            <div className="feature-card">
-              <div className="feature-icon">🤖</div>
-
-              <h3>{ui.aiConversation}</h3>
-
-              <p>{ui.aiConversationDesc}</p>
+              {deletingProfile && <p>{deleteProfileUi.deleting}</p>}
             </div>
           </div>
-        </section>
-      </main>
+        )}
 
-      {/* =================================================
+        {/* =================================================
           FOOTER
       ================================================= */}
+        <footer>
+          <h2>🧠 Living Memory AI</h2>
 
-      <footer>
-        <h2>🧠 Living Memory AI</h2>
+          <p>{ui.memoriesLive}</p>
 
-        <p>{ui.memoriesLive}</p>
-
-        <p>{ui.footerCopy}</p>
-      </footer>
+          <p>{ui.footerCopy}</p>
+        </footer>
+      </div>
     </div>
   );
 }

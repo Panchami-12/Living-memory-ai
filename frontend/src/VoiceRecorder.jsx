@@ -1,8 +1,15 @@
+import { apiFetch } from "./apiFetch";
 import { useRef, useState } from "react";
 
-const API = "http://127.0.0.1:8001";
+const API = import.meta.env.VITE_API_URL || "http://127.0.0.1:8001";
 
-function VoiceRecorder({ onTextGenerated, onAudioRecorded }) {
+function VoiceRecorder({
+  onTextGenerated,
+  onAudioRecorded,
+  transcriptionLanguage = "",
+  buttonLabel = "Record Memory",
+  transcriptLabel = "Transcript added",
+}) {
   const [recording, setRecording] = useState(false);
   const [status, setStatus] = useState("");
 
@@ -51,7 +58,11 @@ function VoiceRecorder({ onTextGenerated, onAudioRecorded }) {
 
           formData.append("audio", audioBlob, "recording.webm");
 
-          const response = await fetch(`${API}/memories/transcribe`, {
+          if (transcriptionLanguage) {
+            formData.append("language", transcriptionLanguage);
+          }
+
+          const response = await apiFetch(`${API}/memories/transcribe`, {
             method: "POST",
             body: formData,
           });
@@ -69,7 +80,7 @@ function VoiceRecorder({ onTextGenerated, onAudioRecorded }) {
               onTextGenerated(transcript);
             }
 
-            setStatus(`✅ Transcript added: ${transcript}`);
+            setStatus(`✅ ${transcriptLabel}: ${transcript}`);
           } else {
             setStatus(
               "No speech detected. Please speak clearly and try again.",
@@ -77,7 +88,6 @@ function VoiceRecorder({ onTextGenerated, onAudioRecorded }) {
           }
         } catch (error) {
           console.error("Transcription error:", error);
-
           setStatus(`❌ Transcription failed: ${error.message}`);
         }
       };
@@ -114,7 +124,7 @@ function VoiceRecorder({ onTextGenerated, onAudioRecorded }) {
     <div className="voice-recorder">
       {!recording ? (
         <button type="button" className="voice-button" onClick={startRecording}>
-          🎤 Record Memory
+          🎤 {buttonLabel}
         </button>
       ) : (
         <button

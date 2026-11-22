@@ -1,0 +1,442 @@
+.grandparents-mode {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 30px;
+  color: #292442;
+  font-family: Arial, sans-serif;
+}
+
+.grandparents-header {
+  text-align: center;
+  padding: 35px 15px;
+  background: #f0eaff;
+  border-radius: 24px;
+  margin-bottom: 25px;
+}
+
+.grandparents-heart {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.grandparents-header h1 {
+  font-size: clamp(26px, 4vw, 38px);
+  margin: 10px 0;
+}
+
+.grandparents-header p {
+  font-size: 23px;
+  margin: 12px 0;
+}
+
+.grandparents-header span {
+  color: #716887;
+  font-size: 17px;
+}
+
+.grandparents-talk {
+  text-align: center;
+  padding: 35px 20px;
+  background: white;
+  border: 2px solid #e5dcff;
+  border-radius: 24px;
+  margin-bottom: 25px;
+}
+
+.grandparents-mic {
+  font-size: 65px;
+  margin-bottom: 12px;
+}
+
+.grandparents-talk h2 {
+  font-size: 28px;
+}
+
+.grandparents-talk p {
+  font-size: 20px;
+  color: #716887;
+}
+
+/* Make the existing recorder easier to use */
+.grandparents-talk .voice-button {
+  min-width: 240px;
+  min-height: 75px;
+  margin: 15px;
+  padding: 18px 28px;
+  border-radius: 50px;
+  font-size: 23px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.grandparents-talk .voice-status {
+  font-size: 18px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.grandparents-result {
+  padding: 25px;
+  background: #f5f1ff;
+  border-radius: 20px;
+  margin-bottom: 25px;
+}
+
+.grandparents-result h2 {
+  font-size: 24px;
+}
+
+.grandparents-result p {
+  font-size: 21px;
+  line-height: 1.8;
+}
+
+.grandparents-result audio {
+  width: 100%;
+  margin-top: 15px;
+}
+
+.grandparents-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.grandparents-card {
+  min-height: 160px;
+  padding: 25px 15px;
+  text-align: center;
+  background: white;
+  border: 2px solid #e8e1f8;
+  border-radius: 20px;
+}
+
+.grandparents-card span {
+  font-size: 42px;
+}
+
+.grandparents-card h3 {
+  font-size: 21px;
+  margin: 12px 0 8px;
+}
+
+.grandparents-card p {
+  font-size: 16px;
+  color: #716887;
+}
+
+.grandparents-memory-count {
+  text-align: center;
+  margin-top: 30px;
+  font-size: 19px;
+  font-weight: bold;
+}
+
+@media (max-width: 600px) {
+  .grandparents-mode {
+    padding: 15px;
+  }
+
+  .grandparents-actions {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .grandparents-header {
+    padding: 25px 12px;
+  }
+
+  .grandparents-talk .voice-button {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+/* ==========================================
+   GRANDPARENTS - ADD MEMORY FORM
+========================================== */
+
+.grandparents-memory-add {
+  width: min(100% - 32px, 760px);
+  margin: 35px auto;
+  padding: 30px;
+  background: #ffffff;
+  border: 1px solid #e8e1ff;
+  border-radius: 24px;
+  box-shadow: 0 8px 30px rgba(75, 55, 150, 0.08);
+  box-sizing: border-box;
+}
+
+.grandparents-memory-add > h2 {
+  text-align: center;
+  color: #282047;
+  font-size: 27px;
+  margin: 0 0 10px;
+}
+
+.grandparents-memory-add > p {
+  text-align: center;
+  color: #817997;
+  margin-bottom: 28px;
+}
+
+.grandparents-memory-add form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.grandparents-memory-add form > label {
+  display: block;
+  color: #392d65;
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 10px;
+}
+
+.grandparents-memory-add input:not([type="file"]),
+.grandparents-memory-add select,
+.grandparents-memory-add textarea {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  padding: 13px 15px;
+  border: 1px solid #ded7f5;
+  border-radius: 12px;
+  background: #faf9ff;
+  color: #30264e;
+  font-size: 15px;
+  font-family: inherit;
+  box-sizing: border-box;
+  outline: none;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.grandparents-memory-add textarea {
+  min-height: 135px;
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.grandparents-memory-add input:focus,
+.grandparents-memory-add select:focus,
+.grandparents-memory-add textarea:focus {
+  border-color: #7046e8;
+  box-shadow: 0 0 0 3px rgba(112, 70, 232, 0.12);
+}
+
+.grandparents-memory-add .voice-recorder {
+  width: 100%;
+  padding: 22px;
+  background: #f5f2ff;
+  border: 1px solid #e4dcff;
+  border-radius: 18px;
+  box-sizing: border-box;
+}
+
+.grandparents-memory-add .voice-button {
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  min-height: 52px;
+  margin: auto;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 30px;
+  background: #6941df;
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.grandparents-memory-add .voice-button:hover {
+  background: #5330c4;
+}
+
+.grandparents-memory-add input[type="file"] {
+  width: 100%;
+  padding: 14px;
+  background: #faf9ff;
+  border: 1px dashed #b9a9ed;
+  border-radius: 12px;
+  box-sizing: border-box;
+}
+
+.grandparents-memory-add input[type="file"]::file-selector-button {
+  padding: 10px 16px;
+  margin-right: 12px;
+  border: none;
+  border-radius: 20px;
+  background: #e9e2ff;
+  color: #5439a3;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.grandparents-memory-add form > button[type="submit"] {
+  width: 100%;
+  min-height: 54px;
+  margin-top: 18px;
+  padding: 13px 20px;
+  border: none;
+  border-radius: 28px;
+  background: linear-gradient(110deg, #7046e8, #9659dc);
+  color: white;
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s;
+}
+
+.grandparents-memory-add form > button[type="submit"]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 18px rgba(105, 65, 223, 0.22);
+}
+
+.grandparents-memory-add form > button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.grandparents-memory-add .voice-status {
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* ==========================================
+   FAMILY PROFILE CARDS
+========================================== */
+
+.family-memory-browser {
+  width: min(100% - 32px, 900px);
+  margin: 40px auto;
+}
+
+.family-memory-browser > h2 {
+  text-align: center;
+  color: #282047;
+  font-size: 26px;
+}
+
+.family-memory-browser > p {
+  text-align: center;
+  color: #817997;
+}
+
+.family-memory-browser .grandparents-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 18px;
+  margin-top: 25px;
+}
+
+.family-memory-browser .grandparents-card {
+  padding: 24px 15px;
+  background: white;
+  border: 1px solid #e6ddff;
+  border-radius: 20px;
+  color: #34265e;
+  box-shadow: 0 5px 20px rgba(75, 55, 150, 0.07);
+  transition:
+    transform 0.2s,
+    border-color 0.2s;
+}
+
+.family-memory-browser .grandparents-card:hover {
+  transform: translateY(-4px);
+  border-color: #8862ec;
+}
+
+.family-memory-browser .grandparents-card span {
+  font-size: 35px;
+}
+
+.family-memory-browser .grandparents-card h3 {
+  margin: 12px 0 6px;
+  color: #392d65;
+}
+
+.family-memory-browser .grandparents-card p {
+  color: #817997;
+}
+
+/* ==========================================
+   SAVED FAMILY MEMORIES
+========================================== */
+
+.family-memories {
+  width: min(100% - 32px, 760px);
+  margin: 35px auto;
+  padding: 25px;
+  background: white;
+  border: 1px solid #e8e1ff;
+  border-radius: 22px;
+  box-sizing: border-box;
+}
+
+.family-memories > h2 {
+  color: #392d65;
+  text-align: center;
+}
+
+.family-memory-card {
+  margin: 18px 0;
+  padding: 20px;
+  background: #faf9ff;
+  border: 1px solid #e8e1ff;
+  border-radius: 16px;
+}
+
+.family-memory-card h3 {
+  color: #392d65;
+}
+
+.family-memory-card p {
+  color: #5e5770;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.family-memory-image {
+  display: block;
+  width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+  margin: 15px auto;
+  border-radius: 14px;
+}
+
+.family-memory-card audio {
+  margin-top: 12px;
+}
+
+/* ==========================================
+   MOBILE RESPONSIVENESS
+========================================== */
+
+@media (max-width: 600px) {
+  .grandparents-memory-add {
+    padding: 20px;
+    margin: 22px auto;
+  }
+
+  .grandparents-memory-add > h2 {
+    font-size: 22px;
+  }
+
+  .family-memory-browser .grandparents-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .family-memories {
+    padding: 16px;
+  }
+}

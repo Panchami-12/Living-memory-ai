@@ -1,10 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Column
-from sqlalchemy import DateTime
-from sqlalchemy import Integer
-from sqlalchemy import String
-from sqlalchemy import Text
+from sqlalchemy import Column, DateTime, Integer, String, Text, JSON
 
 from app.core.database import Base
 
@@ -50,7 +46,12 @@ class Memory(Base):
         DateTime,
         default=datetime.utcnow
     )
-
+    # Profiles that must not be allowed to view this memory
+    hidden_from_profile_ids = Column(
+        JSON,
+        nullable=False,
+        default=list
+    )
     # =====================================================
     # PHOTO / IMAGE
     # =====================================================

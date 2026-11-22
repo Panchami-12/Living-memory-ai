@@ -1,49 +1,69 @@
+﻿import os
 from pathlib import Path
 
-from sqlalchemy import create_engine
-from sqlalchemy import inspect
-from sqlalchemy import text
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 
 # =========================================================
-# FIND BACKEND FOLDER
+# PATHS AND ENVIRONMENT
 # =========================================================
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
-
-# =========================================================
-# DATABASE STORAGE
-# =========================================================
+load_dotenv(BASE_DIR / ".env")
 
 STORAGE_DIR = BASE_DIR / "storage"
-
-STORAGE_DIR.mkdir(
-    parents=True,
-    exist_ok=True
-)
+STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # =========================================================
-# SQLITE DATABASE
+# DATABASE CONFIGURATION
 # =========================================================
+
+DEFAULT_SQLITE_URL = f"sqlite:///{STORAGE_DIR / 'living_memory.db'}"
 
 DATABASE_URL = (
-    f"sqlite:///{STORAGE_DIR / 'living_memory.db'}"
+    os.getenv("DATABASE_URL", "").strip()
+    or DEFAULT_SQLITE_URL
 )
+
+# Support standard PostgreSQL URLs using the psycopg 3 driver.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgres://",
+        "postgresql+psycopg://",
+        1,
+    )
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgresql://",
+        "postgresql+psycopg://",
+        1,
+    )
+
+if not (
+    DATABASE_URL.startswith("sqlite:")
+    or DATABASE_URL.startswith("postgresql+psycopg://")
+):
+    raise RuntimeError("Unsupported DATABASE_URL configuration.")
 
 
 # =========================================================
 # SQLALCHEMY ENGINE
 # =========================================================
 
+engine_options = {"pool_pre_ping": True}
+
+if DATABASE_URL.startswith("sqlite:"):
+    engine_options["connect_args"] = {
+        "check_same_thread": False
+    }
+
 engine = create_engine(
     DATABASE_URL,
-    connect_args={
-        "check_same_thread": False
-    },
+    **engine_options,
 )
 
 
@@ -58,43 +78,26 @@ SessionLocal = sessionmaker(
 )
 
 
-# =========================================================
-# BASE MODEL
-# =========================================================
-
 class Base(DeclarativeBase):
     pass
 
 
-# =========================================================
-# DATABASE SESSION
-# =========================================================
-
 def get_db():
-    """Provide a database session to API endpoints."""
-
     db = SessionLocal()
 
     try:
         yield db
-
     finally:
         db.close()
 
 
 # =========================================================
-# DATABASE MIGRATION
+# SAFE DATABASE MIGRATIONS
 # =========================================================
 
 def add_missing_columns():
-    """
-    Add new columns to existing SQLite tables
-    without deleting existing data.
-    """
-
     inspector = inspect(engine)
 
-    # Check whether memories table exists
     if "memories" not in inspector.get_table_names():
         return
 
@@ -103,67 +106,33 @@ def add_missing_columns():
         for column in inspector.get_columns("memories")
     }
 
-    # Add image_url if it doesn't already exist
-    if "image_url" not in existing_columns:
+    migrations = {
+        "image_url": """
+            ALTER TABLE memories
+            ADD COLUMN image_url VARCHAR(500)
+        """,
+        "audio_url": """
+            ALTER TABLE memories
+            ADD COLUMN audio_url VARCHAR(500)
+        """,
+        "profile_id": """
+            ALTER TABLE memories
+            ADD COLUMN profile_id INTEGER
+        """,
+        "hidden_from_profile_ids": """
+            ALTER TABLE memories
+            ADD COLUMN hidden_from_profile_ids JSON
+            NOT NULL DEFAULT '[]'
+        """,
+    }
 
-        with engine.begin() as connection:
+    for column_name, sql_statement in migrations.items():
+        if column_name not in existing_columns:
+            with engine.begin() as connection:
+                connection.execute(text(sql_statement))
 
-            connection.execute(
-                text(
-                    """
-                    ALTER TABLE memories
-                    ADD COLUMN image_url VARCHAR(500)
-                    """
-                )
-            )
+            print(f"Database updated: {column_name} column added.")
+        else:
+            print(f"Database already contains {column_name}.")
 
-        print(
-            "Database updated: image_url column added."
-        )
 
-    else:
-        print(
-            "Database already contains image_url."
-        )
-        # Add audio_url if it doesn't already exist
-    if "audio_url" not in existing_columns:
-
-        with engine.begin() as connection:
-
-            connection.execute(
-                text(
-                    """
-                    ALTER TABLE memories
-                    ADD COLUMN audio_url VARCHAR(500)
-                    """
-                )
-            )
-
-        print(
-            "Database updated: audio_url column added."
-        )
-
-    else:
-        print("Database already contains audio_url."
-        )
-
-    if "profile_id" not in existing_columns:
-        with engine.begin() as connection:
-            connection.execute(
-                text(
-                    """
-                    ALTER TABLE memories
-                    ADD COLUMN profile_id INTEGER
-                    """
-                )            )
-
-        print("Database updated: profile_id column added.")
-
-    else:
-        print("Database already contains profile_id.")
-
-# =========================================================
-# RUN DATABASE MIGRATION
-# =========================================================
-
-add_missing_columns()
