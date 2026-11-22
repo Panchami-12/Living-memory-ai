@@ -16,6 +16,7 @@ from app.services.storage_service import (
     memory_object_path,
     upload_private_file,
     download_private_file,
+    delete_private_file,
     remove_memory_files as remove_stored_memory_files,
 )
 from pathlib import Path

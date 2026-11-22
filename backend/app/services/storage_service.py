@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import os
 from functools import lru_cache
-from io import BytesIO
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -100,7 +99,7 @@ def upload_private_file(
 
     client.storage.from_(bucket).upload(
         path=object_path,
-        file=BytesIO(contents),
+        file=contents,
         file_options={
             "content-type": content_type,
             "cache-control": "0",
