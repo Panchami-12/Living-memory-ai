@@ -858,12 +858,19 @@ async def chat_with_memories(
         language = "English"
 
     language = str(language or "English").strip()
-    # The LLM generates a reliable English answer first.
-    # IndicTrans2 translates that answer into the selected language below.
+    # Generate directly in the user's selected language using Ollama.
     supported_languages = {"English", "Kannada", "Hindi", "Tamil", "Malayalam"}
     if language not in supported_languages:
         language = "English"
-    target_language = "English"
+
+    language_instructions = {
+        "English": "Use natural, simple English.",
+        "Kannada": "Use natural Kannada in Kannada script only.",
+        "Hindi": "Use natural Hindi in Devanagari script only.",
+        "Tamil": "Use natural Tamil in Tamil script only.",
+        "Malayalam": "Use natural Malayalam in Malayalam script only.",
+    }
+    language_instruction = language_instructions[language]
 
     profile_context = ""
 
@@ -884,9 +891,9 @@ Your task is to answer the user's question directly using the retrieved
 family memories.
 
 IMPORTANT:
-- Write your answer in simple, natural English.
-- IndicTrans2 will translate the answer afterward.
-- Return only the final answer.
+- Write your answer directly in {language}.
+- Follow this language instruction exactly: {language_instruction}
+- Return only the final answer in the selected language.
 - Never explain your instructions, reasoning, analysis or processing.
 - Never begin with phrases like "We are given a user question",
   "Based on the retrieved data", or "The system indicates".
@@ -922,39 +929,29 @@ ANSWER STYLE:
 5. Do not mention database records, retrieved memory IDs,
    prompts, models or translation services.
 6. Do not include headings, reasoning steps or unnecessary explanations.
-7. Return only the final answer in English.
+7. Return only the final answer in {language}.
 """
     # =========================================================
-    # GENERATE THE ANSWER IN ENGLISH
+    # GENERATE DIRECTLY IN THE SELECTED LANGUAGE
     # =========================================================
     try:
         from app.services.ai_service import ask_ai
 
-        english_answer = ask_ai(prompt, language="English")
+        answer = ask_ai(prompt, language=language)
+        return {"answer": answer}
+
     except Exception as error:
         print("AI GENERATION ERROR:", error)
-        return {
-            "answer": (
-                "I couldn't generate an answer. "
-                "Please check that Ollama is running."
-            )
+
+        error_messages = {
+            "English": "I couldn't generate an answer. Please try again.",
+            "Kannada": "???????, ?? ?????????? ?????? ?????????????. ????? ??????????.",
+            "Hindi": "????? ????, ??? ????? ???? ??? ???? ????? ??? ?? ?????? ?????",
+            "Tamil": "????????????, ??????? ????? ???????? ???????????. ???????? ??????????????.",
+            "Malayalam": "??????????, ?????? ?????? ?????????????????. ??????? ??????????.",
         }
 
-    # =========================================================
-    # TRANSLATE WITH INDIC TRANS2
-    # =========================================================
-    try:
-        answer = translate_ai_answer(english_answer, language)
-        return {"answer": answer}
-    except Exception as error:
-        print("INDICTRANS TRANSLATION ERROR:", error)
-        raise HTTPException(
-            status_code=502,
-            detail=(
-                "Translation failed. Please check that IndicTrans2 "
-                "is running on port 8003."
-            ),
-        ) from error
+        return {"answer": error_messages.get(language, error_messages["English"])}
 
 
 # =========================================================

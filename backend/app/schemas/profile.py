@@ -15,7 +15,8 @@ class ProfileUpdate(BaseModel):
     relationship_type: Optional[str] = None
     description: Optional[str] = None
     photo_url: Optional[str] = None
-
+class ProfilePinSet(BaseModel):
+    pin: str
 
 class ProfileResponse(BaseModel):
     id: int
@@ -24,6 +25,6 @@ class ProfileResponse(BaseModel):
     relationship_type: str
     description: Optional[str] = None
     photo_url: Optional[str] = None
-
+    pin_enabled: bool = False
     class Config:
         from_attributes = True

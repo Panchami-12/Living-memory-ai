@@ -1,5 +1,10 @@
-﻿
+﻿import re
+
+from app.services.family_pin import hash_family_pin
+from app.schemas.profile import ProfilePinSet
+
 from pathlib import Path
+
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -358,3 +363,78 @@ Rules:
             status_code=502,
             detail="Could not generate the life story.",
         )
+# =========================================================
+# SET OR CHANGE FAMILY PROFILE PIN
+# Owner-only endpoint
+# =========================================================
+
+@router.put("/{profile_id}/pin")
+def set_family_profile_pin(
+    profile_id: int,
+    data: ProfilePinSet,
+    user_id: int,
+    db: Session = Depends(get_db),
+):
+    if not re.fullmatch(r"\d{6}", data.pin):
+        raise HTTPException(
+            status_code=400,
+            detail="PIN must contain exactly six digits.",
+        )
+
+    profile = db.query(Profile).filter(
+        Profile.id == profile_id,
+        Profile.user_id == user_id,
+    ).first()
+
+    if not profile:
+        raise HTTPException(
+            status_code=404,
+            detail="Family profile not found.",
+        )
+
+    profile.pin_hash = hash_family_pin(data.pin)
+    profile.pin_failed_attempts = 0
+    profile.pin_locked_until = None
+
+    db.commit()
+
+    return {
+        "message": "Family PIN saved successfully.",
+        "profile_id": profile.id,
+        "pin_enabled": True,
+    }
+
+
+# =========================================================
+# REMOVE FAMILY PROFILE PIN
+# Owner-only endpoint
+# =========================================================
+
+@router.delete("/{profile_id}/pin")
+def remove_family_profile_pin(
+    profile_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+):
+    profile = db.query(Profile).filter(
+        Profile.id == profile_id,
+        Profile.user_id == user_id,
+    ).first()
+
+    if not profile:
+        raise HTTPException(
+            status_code=404,
+            detail="Family profile not found.",
+        )
+
+    profile.pin_hash = None
+    profile.pin_failed_attempts = 0
+    profile.pin_locked_until = None
+
+    db.commit()
+
+    return {
+        "message": "Family PIN removed successfully.",
+        "profile_id": profile.id,
+        "pin_enabled": False,
+    }

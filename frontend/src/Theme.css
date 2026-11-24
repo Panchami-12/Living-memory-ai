@@ -1,0 +1,1583 @@
+/* =========================================================
+   LIVING MEMORY AI — COMPLETE MIDNIGHT LAVENDER THEME
+   Light theme remains unchanged.
+   ========================================================= */
+
+/* 1. DARK THEME COLOR PALETTE */
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+
+  --lm-page: #12101d;
+  --lm-sidebar: #211a35;
+  --lm-topbar: #201a31;
+  --lm-surface: #252039;
+  --lm-surface-soft: #2d2642;
+  --lm-input: #191526;
+
+  --lm-ink: #f6f1ff;
+  --lm-text: #e6ddf5;
+  --lm-muted: #bcb1d0;
+
+  --lm-line: #493c60;
+  --lm-line-soft: #3b304f;
+
+  --lm-purple: #a98af7;
+  --lm-purple-dark: #c3aaff;
+  --lm-lavender: #382d51;
+
+  --lm-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+}
+
+/* 2. GLOBAL BACKGROUND */
+
+html[data-theme="dark"],
+html[data-theme="dark"] body,
+html[data-theme="dark"] #root {
+  background: var(--lm-page) !important;
+  color: var(--lm-ink);
+}
+
+html[data-theme="dark"] body {
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] .app,
+html[data-theme="dark"] .lm-app-shell,
+html[data-theme="dark"] .lm-main-column {
+  background: var(--lm-page) !important;
+  color: var(--lm-ink);
+}
+
+/* 3. SIDEBAR */
+
+html[data-theme="dark"] .lm-sidebar {
+  background: var(--lm-sidebar) !important;
+  color: var(--lm-ink) !important;
+  border-color: var(--lm-line-soft) !important;
+}
+
+html[data-theme="dark"] .lm-sidebar h1,
+html[data-theme="dark"] .lm-sidebar h2,
+html[data-theme="dark"] .lm-sidebar h3,
+html[data-theme="dark"] .lm-sidebar p,
+html[data-theme="dark"] .lm-sidebar span {
+  color: inherit;
+}
+
+html[data-theme="dark"] .lm-sidebar a,
+html[data-theme="dark"] .lm-sidebar button {
+  color: #e7ddff;
+}
+
+html[data-theme="dark"] .lm-sidebar button:hover {
+  background: #35294f;
+}
+
+html[data-theme="dark"] .lm-sidebar .active,
+html[data-theme="dark"] .lm-sidebar .selected {
+  background: #453765 !important;
+  color: white !important;
+}
+
+/* 4. TOP HEADER */
+
+html[data-theme="dark"] .lm-topbar {
+  background: linear-gradient(115deg, #211a34, #28213e) !important;
+
+  border-color: var(--lm-line-soft) !important;
+  color: var(--lm-ink) !important;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+}
+
+html[data-theme="dark"] .lm-page-heading h1 {
+  color: #f7f2ff !important;
+}
+
+html[data-theme="dark"] .lm-breadcrumb,
+html[data-theme="dark"] .lm-eyebrow {
+  color: #b9a8e3 !important;
+}
+
+html[data-theme="dark"] .lm-user-chip {
+  color: #e6ddf5 !important;
+}
+
+html[data-theme="dark"] .lm-user-avatar {
+  background: #44345f !important;
+  color: #f5eaff !important;
+}
+
+/* 5. LANGUAGE SELECTOR */
+
+html[data-theme="dark"] .lm-language-control {
+  background: #2b2540 !important;
+  border: 1px solid var(--lm-line) !important;
+  color: var(--lm-ink) !important;
+}
+
+html[data-theme="dark"] .lm-language-control select {
+  background: transparent !important;
+  color: var(--lm-ink) !important;
+  border: none !important;
+}
+
+html[data-theme="dark"] option {
+  background: #252039;
+  color: #f6f1ff;
+}
+
+/* 6. MAIN CONTENT */
+
+html[data-theme="dark"] .lm-content {
+  background: var(--lm-page);
+  color: var(--lm-ink);
+}
+
+html[data-theme="dark"] .lm-content h1,
+html[data-theme="dark"] .lm-content h2,
+html[data-theme="dark"] .lm-content h3,
+html[data-theme="dark"] .lm-content h4,
+html[data-theme="dark"] .lm-content h5 {
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .lm-content p,
+html[data-theme="dark"] .lm-content small {
+  color: var(--lm-muted);
+}
+
+html[data-theme="dark"] .lm-content label,
+html[data-theme="dark"] .lm-content legend {
+  color: #ded2f5;
+}
+
+/* 7. GENERAL CARDS AND PANELS */
+
+html[data-theme="dark"]
+  .lm-content
+  :is(
+    article,
+    section,
+    form,
+    fieldset,
+    [class*="card"],
+    [class*="panel"],
+    [class*="form"],
+    [class*="surface"],
+    [class*="privacy"],
+    [class*="family"],
+    [class*="grandparent"],
+    [class*="memory"]
+  ):not(input):not(textarea):not(select):not(button) {
+  background-color: var(--lm-surface);
+  border-color: var(--lm-line);
+  color: var(--lm-ink);
+}
+
+/* Soft plum surface for nested cards */
+
+html[data-theme="dark"]
+  .lm-content
+  :is(
+    [class*="inner-card"],
+    [class*="profile-option"],
+    [class*="memory-option"],
+    [class*="privacy-option"]
+  ) {
+  background: var(--lm-surface-soft) !important;
+  border-color: var(--lm-line) !important;
+  color: var(--lm-text) !important;
+}
+
+/* Decorative hero sections */
+
+html[data-theme="dark"] .lm-content :is([class*="hero"], [class*="banner"]) {
+  background: linear-gradient(125deg, #302447, #453363 65%, #57417a) !important;
+
+  border-color: #655187 !important;
+  color: white !important;
+}
+
+html[data-theme="dark"] .lm-content :is([class*="hero"], [class*="banner"]) h1,
+html[data-theme="dark"] .lm-content :is([class*="hero"], [class*="banner"]) h2,
+html[data-theme="dark"] .lm-content :is([class*="hero"], [class*="banner"]) p {
+  color: #f7f0ff !important;
+}
+
+/* 8. DASHBOARD WELCOME CARD */
+
+html[data-theme="dark"] .lm-welcome {
+  background: linear-gradient(120deg, #302447, #29213d, #241e35) !important;
+
+  border: 1px solid #57466f !important;
+  color: var(--lm-ink) !important;
+}
+
+html[data-theme="dark"] .lm-welcome h2 {
+  color: #fff5ff !important;
+}
+
+html[data-theme="dark"] .lm-welcome p {
+  color: #cbbce0 !important;
+}
+
+/* 9. DASHBOARD STATISTICS */
+
+html[data-theme="dark"] .lm-stat-card,
+html[data-theme="dark"] .lm-panel {
+  background: var(--lm-surface) !important;
+  border-color: var(--lm-line) !important;
+  color: var(--lm-ink) !important;
+  box-shadow: var(--lm-shadow);
+}
+
+html[data-theme="dark"] .lm-stat-icon {
+  background: #3a2d55 !important;
+  color: #d6c0ff !important;
+}
+
+html[data-theme="dark"] .lm-stat-value {
+  color: #f7efff !important;
+}
+
+html[data-theme="dark"] .lm-stat-label {
+  color: #d9cfea !important;
+}
+
+html[data-theme="dark"] .lm-stat-hint {
+  color: #c3aaff !important;
+}
+
+/* 10. MEMORIES PAGE */
+
+html[data-theme="dark"] .voice-recorder,
+html[data-theme="dark"] .photo-upload,
+html[data-theme="dark"] .memory-privacy-section {
+  background: linear-gradient(135deg, #29223d, #34294b) !important;
+
+  color: var(--lm-ink) !important;
+  border: 1px solid #55436f !important;
+  border-radius: 18px;
+  box-shadow: var(--lm-shadow);
+}
+
+html[data-theme="dark"] .photo-upload {
+  border: 2px dashed #8069ac !important;
+}
+
+html[data-theme="dark"] .photo-upload-label {
+  background: #493665 !important;
+  color: #f2eaff !important;
+  border: 1px solid #76609c !important;
+  border-radius: 10px;
+}
+
+html[data-theme="dark"] .photo-upload-label:hover {
+  background: #5b447e !important;
+}
+
+html[data-theme="dark"] .memory-privacy-section h3,
+html[data-theme="dark"] .voice-recorder h2,
+html[data-theme="dark"] .voice-recorder h3 {
+  color: #f5edff !important;
+}
+
+/* 11. GRANDPARENTS MODE */
+
+html[data-theme="dark"]
+  .lm-content
+  :is([class*="grandparent"], [class*="family"], [class*="grandparents"]) {
+  background-color: var(--lm-surface) !important;
+  border-color: var(--lm-line) !important;
+  color: var(--lm-ink) !important;
+}
+
+/* Family memory form */
+
+html[data-theme="dark"]
+  .lm-content
+  :is([class*="grandparent"], [class*="family"])
+  :is(
+    form,
+    fieldset,
+    article,
+    [class*="card"],
+    [class*="form"],
+    [class*="panel"],
+    [class*="section"]
+  ) {
+  background: #29233c !important;
+  border-color: #514268 !important;
+  color: #f5efff !important;
+  border-radius: 15px;
+}
+
+/* Family memory headings */
+
+html[data-theme="dark"]
+  .lm-content
+  :is([class*="grandparent"], [class*="family"])
+  h1,
+html[data-theme="dark"]
+  .lm-content
+  :is([class*="grandparent"], [class*="family"])
+  h2,
+html[data-theme="dark"]
+  .lm-content
+  :is([class*="grandparent"], [class*="family"])
+  h3,
+html[data-theme="dark"]
+  .lm-content
+  :is([class*="grandparent"], [class*="family"])
+  legend {
+  color: #f5edff !important;
+}
+
+/* Family memory descriptions and labels */
+
+html[data-theme="dark"]
+  .lm-content
+  :is([class*="grandparent"], [class*="family"])
+  p,
+html[data-theme="dark"]
+  .lm-content
+  :is([class*="grandparent"], [class*="family"])
+  label,
+html[data-theme="dark"]
+  .lm-content
+  :is([class*="grandparent"], [class*="family"])
+  span {
+  color: #d0c4e5;
+}
+
+/* Privacy checkbox area */
+
+html[data-theme="dark"] .lm-content fieldset {
+  background: #29233c !important;
+  border: 1px solid #625078 !important;
+  border-radius: 13px;
+  padding: 18px;
+}
+
+html[data-theme="dark"] .lm-content legend {
+  color: #e8dcff !important;
+  padding: 0 8px;
+}
+
+html[data-theme="dark"] input[type="checkbox"],
+html[data-theme="dark"] input[type="radio"] {
+  accent-color: #a98af7;
+  cursor: pointer;
+}
+
+html[data-theme="dark"] .lm-content input[type="checkbox"],
+html[data-theme="dark"] .lm-content input[type="radio"] {
+  width: 18px !important;
+  height: 18px !important;
+  min-width: 18px;
+  accent-color: #a98af7;
+}
+
+/* 12. TIME CAPSULES */
+
+html[data-theme="dark"]
+  .lm-content
+  :is([class*="capsule"], [class*="time-capsule"]) {
+  border-color: var(--lm-line) !important;
+  color: var(--lm-ink);
+}
+
+html[data-theme="dark"]
+  .lm-content
+  :is([class*="capsule-card"], [class*="capsule-form"]) {
+  background: #262039 !important;
+  border-color: #514268 !important;
+  color: #f5efff !important;
+}
+
+/* 13. INPUTS, TEXTAREAS AND SELECTS */
+
+html[data-theme="dark"]
+  .lm-content
+  input:not([type="checkbox"]):not([type="radio"]),
+html[data-theme="dark"] .lm-content textarea,
+html[data-theme="dark"] .lm-content select,
+html[data-theme="dark"] .auth-card input,
+html[data-theme="dark"] .auth-card textarea,
+html[data-theme="dark"] .auth-card select {
+  background: var(--lm-input) !important;
+  color: #f5efff !important;
+  border: 1px solid #55466e !important;
+  border-radius: 10px;
+}
+
+html[data-theme="dark"] .lm-content input::placeholder,
+html[data-theme="dark"] .lm-content textarea::placeholder {
+  color: #a99cbe !important;
+  opacity: 1;
+}
+
+html[data-theme="dark"] .lm-content input:focus,
+html[data-theme="dark"] .lm-content textarea:focus,
+html[data-theme="dark"] .lm-content select:focus {
+  border-color: #a98af7 !important;
+  outline: 2px solid rgba(169, 138, 247, 0.2);
+  outline-offset: 2px;
+}
+
+/* File upload chooser */
+
+html[data-theme="dark"] input[type="file"] {
+  color: #e9ddff !important;
+}
+
+html[data-theme="dark"] input[type="file"]::file-selector-button {
+  background: #493665;
+  color: white;
+  border: 1px solid #76609c;
+  border-radius: 8px;
+  padding: 9px 14px;
+  margin-right: 12px;
+  cursor: pointer;
+}
+
+/* 14. BUTTONS */
+
+html[data-theme="dark"] .primary-button,
+html[data-theme="dark"] .lm-add-main,
+html[data-theme="dark"] .lm-content button[type="submit"] {
+  background: linear-gradient(115deg, #7653d8, #9871ed) !important;
+
+  color: white !important;
+  border: none !important;
+  border-radius: 11px;
+  font-weight: 700;
+  box-shadow: 0 5px 16px rgba(111, 77, 204, 0.22);
+}
+
+html[data-theme="dark"] .primary-button:hover,
+html[data-theme="dark"] .lm-add-main:hover,
+html[data-theme="dark"] .lm-content button[type="submit"]:hover {
+  background: linear-gradient(115deg, #8968e8, #ae8bff) !important;
+}
+
+html[data-theme="dark"]
+  .lm-content
+  button:not(.primary-button):not(.lm-add-main):not([class*="icon"]) {
+  color: #eee5ff;
+}
+
+html[data-theme="dark"] .lm-text-button {
+  color: #c8b5ff !important;
+}
+
+html[data-theme="dark"] .lm-text-button:hover {
+  background: #3a2d55 !important;
+}
+
+/* 15. THEME TOGGLE */
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 10px 15px;
+  border-radius: 12px;
+
+  background: #f0ebff;
+  border: 1px solid #ded3f7;
+
+  color: #59418e;
+  font-size: 13px;
+  font-weight: 750;
+
+  cursor: pointer;
+  white-space: nowrap;
+
+  transition: all 0.2s ease;
+}
+
+.theme-toggle:hover {
+  transform: translateY(-2px);
+  background: #e6dcff;
+}
+
+.theme-toggle-login {
+  position: absolute;
+  right: 7%;
+  top: 22px;
+}
+
+html[data-theme="dark"] .theme-toggle {
+  background: #3b2e56 !important;
+  border: 1px solid #715b94 !important;
+  color: #f3eaff !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.17);
+}
+
+html[data-theme="dark"] .theme-toggle:hover {
+  background: #50406f !important;
+  border-color: #9b80c9 !important;
+}
+
+/* 16. LOGIN PAGE */
+
+html[data-theme="dark"] .app {
+  background:
+    radial-gradient(
+      circle at 15% 15%,
+      rgba(130, 91, 208, 0.15),
+      transparent 35%
+    ),
+    radial-gradient(
+      circle at 90% 80%,
+      rgba(110, 75, 174, 0.12),
+      transparent 35%
+    ),
+    #12101d !important;
+
+  color: var(--lm-ink);
+}
+
+html[data-theme="dark"] .auth-card {
+  background: #252039 !important;
+  border: 1px solid #4b3e61 !important;
+  color: #f5efff !important;
+  box-shadow: var(--lm-shadow);
+}
+
+html[data-theme="dark"] .auth-card h1,
+html[data-theme="dark"] .auth-card h2,
+html[data-theme="dark"] .auth-card h3 {
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .auth-subtitle,
+html[data-theme="dark"] .auth-card p {
+  color: #bfb3d4 !important;
+}
+
+/* 17. RECENT MEMORY TEXT */
+
+html[data-theme="dark"] .lm-recent-item {
+  border-color: var(--lm-line-soft) !important;
+}
+
+html[data-theme="dark"] .lm-recent-copy strong {
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .lm-recent-copy small {
+  color: #b6a9cb !important;
+}
+
+html[data-theme="dark"] .lm-recent-symbol {
+  background: #3a2d55 !important;
+  color: #d6c1ff !important;
+}
+
+/* 18. EMPTY STATES */
+
+html[data-theme="dark"] .lm-empty h4 {
+  color: #f3ecff !important;
+}
+
+html[data-theme="dark"] .lm-empty p {
+  color: #bcb1d0 !important;
+}
+
+/* 19. SCROLLBAR */
+
+html[data-theme="dark"] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #191526;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #57466e;
+  border-radius: 10px;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #8069a5;
+}
+
+/* 20. SMOOTH TRANSITIONS */
+
+html[data-theme="dark"] body,
+html[data-theme="dark"] .lm-app-shell,
+html[data-theme="dark"] .lm-sidebar,
+html[data-theme="dark"] .lm-topbar,
+html[data-theme="dark"] .lm-content,
+html[data-theme="dark"] .lm-panel,
+html[data-theme="dark"] .lm-stat-card,
+html[data-theme="dark"] .auth-card,
+html[data-theme="dark"] .theme-toggle {
+  transition:
+    background-color 0.22s ease,
+    color 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+/* =====================================================
+   LIVING MEMORY AI — FINAL DARK THEME POLISH
+   ===================================================== */
+
+/* 1. AI CHAT */
+
+html[data-theme="dark"] .chat-section {
+  background: transparent !important;
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .chat-section h2 {
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .chat-input {
+  background: #191526 !important;
+  color: #f5efff !important;
+  border: 1px solid #55466e !important;
+  border-radius: 12px;
+}
+
+html[data-theme="dark"] .chat-input::placeholder {
+  color: #a99cbe !important;
+}
+
+html[data-theme="dark"] .chat-history {
+  background: transparent !important;
+}
+
+html[data-theme="dark"] .empty-chat {
+  background: linear-gradient(135deg, #302644, #3b2d53) !important;
+  border: 1px solid #655183 !important;
+  border-radius: 18px !important;
+  color: #f5efff !important;
+  padding: 30px !important;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.18);
+}
+
+html[data-theme="dark"] .empty-chat h3 {
+  color: #f7efff !important;
+}
+
+html[data-theme="dark"] .empty-chat p {
+  color: #d3c5e9 !important;
+}
+
+/* Chat suggestion buttons */
+
+html[data-theme="dark"] .chat-history button:not(.primary-button),
+html[data-theme="dark"] .chat-section .chat-suggestions button {
+  background: #382d50 !important;
+  color: #eee4ff !important;
+  border: 1px solid #625078 !important;
+  border-radius: 30px !important;
+}
+
+html[data-theme="dark"] .chat-history button:hover {
+  background: #493963 !important;
+  border-color: #a78bfa !important;
+}
+
+/* 2. PROFILE CARDS */
+
+html[data-theme="dark"] .profiles-section {
+  background: transparent !important;
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .profiles-section .section-heading h2,
+html[data-theme="dark"] .profiles-section .section-heading p {
+  color: #f0e8ff !important;
+}
+
+html[data-theme="dark"] .profiles-grid {
+  gap: 18px;
+}
+
+html[data-theme="dark"] .profile-card {
+  background: linear-gradient(145deg, #29233d, #211c32) !important;
+  border: 1px solid #514268 !important;
+  border-radius: 18px !important;
+  padding: 24px !important;
+  color: #f4edff !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.17);
+}
+
+html[data-theme="dark"] .profile-card:hover {
+  border-color: #9377c5 !important;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+html[data-theme="dark"] .profile-card h3 {
+  color: #f8f2ff !important;
+}
+
+html[data-theme="dark"] .profile-card p {
+  color: #c5b9d9 !important;
+}
+
+html[data-theme="dark"] .profile-relation {
+  color: #c4aaff !important;
+}
+
+html[data-theme="dark"] .profile-avatar {
+  background: #403258 !important;
+  border: 1px solid #655184 !important;
+  color: #f0e5ff !important;
+}
+
+html[data-theme="dark"] .profile-card .primary-button {
+  background: linear-gradient(115deg, #7653d8, #9871ed) !important;
+  color: #fff !important;
+}
+
+html[data-theme="dark"] .profile-card .secondary-button {
+  background: #49385f !important;
+  border: 1px solid #796197 !important;
+  color: #f5ebff !important;
+}
+
+html[data-theme="dark"] .profile-card .secondary-button:hover {
+  background: #5c4678 !important;
+}
+
+/* Profile life story */
+
+html[data-theme="dark"] .identity-summary {
+  background: #302644 !important;
+  border: 1px solid #59466f !important;
+  border-radius: 14px !important;
+  padding: 16px !important;
+  color: #eee5ff !important;
+}
+
+html[data-theme="dark"] .identity-summary h4,
+html[data-theme="dark"] .identity-summary p {
+  color: #eee5ff !important;
+}
+
+/* 3. MEMORY FILTER PANEL */
+
+html[data-theme="dark"] .memory-filters {
+  background: linear-gradient(135deg, #28223b, #302743) !important;
+  border: 1px solid #57466f !important;
+  border-radius: 18px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="dark"] .memory-filters-header {
+  background: transparent !important;
+}
+
+html[data-theme="dark"] .memory-filters-header h3 {
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .memory-filters-header p {
+  color: #c1b5d5 !important;
+}
+
+html[data-theme="dark"] .memory-filter-field label {
+  color: #e0d5f2 !important;
+}
+
+html[data-theme="dark"] .memory-filter-field select,
+html[data-theme="dark"] .memory-filter-field input[type="date"] {
+  background: #191526 !important;
+  border: 1px solid #5b4a72 !important;
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .memory-filters .clear-filters-button,
+html[data-theme="dark"] .clear-filters-button {
+  background: #493762 !important;
+  border: 1px solid #70598f !important;
+  color: #f2e9ff !important;
+}
+
+html[data-theme="dark"] .memory-filters .clear-filters-button:hover {
+  background: #5a4576 !important;
+}
+
+html[data-theme="dark"] .memory-results-count {
+  color: #c4b8d8 !important;
+}
+
+html[data-theme="dark"] .memory-results-count strong {
+  color: #c5aaff !important;
+}
+
+/* Memory cards */
+
+html[data-theme="dark"] .memory-card {
+  background: linear-gradient(145deg, #29233d, #211c32) !important;
+  border: 1px solid #514268 !important;
+  border-radius: 17px !important;
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .memory-card h3,
+html[data-theme="dark"] .memory-card strong {
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .memory-card p {
+  color: #c6badb !important;
+}
+
+/* 4. SETTINGS PAGE */
+
+html[data-theme="dark"] .lm-settings-page {
+  background: linear-gradient(145deg, #28223b, #241e35) !important;
+  border: 1px solid #514268 !important;
+  border-radius: 20px !important;
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .lm-settings-page h2,
+html[data-theme="dark"] .lm-settings-page h3 {
+  color: #f8f1ff !important;
+}
+
+html[data-theme="dark"] .lm-settings-page > p {
+  color: #c7bbda !important;
+}
+
+html[data-theme="dark"] .lm-settings-page strong,
+html[data-theme="dark"] .lm-settings-page label,
+html[data-theme="dark"] .lm-settings-page dt {
+  color: #e8ddf8 !important;
+}
+
+html[data-theme="dark"] .lm-settings-page span {
+  color: #c5b7dc;
+}
+
+html[data-theme="dark"] .lm-settings-page select {
+  background: #191526 !important;
+  border: 1px solid #65517e !important;
+  color: #f5efff !important;
+  border-radius: 10px !important;
+}
+
+html[data-theme="dark"] .lm-settings-page .lm-settings-actions {
+  background: transparent !important;
+  border-color: #514268 !important;
+}
+
+html[data-theme="dark"] .lm-settings-actions .secondary-button {
+  background: #49385f !important;
+  color: #f4eaff !important;
+  border: 1px solid #796197 !important;
+  border-radius: 11px !important;
+}
+
+html[data-theme="dark"] .lm-settings-actions .secondary-button:hover {
+  background: #5c4678 !important;
+}
+
+html[data-theme="dark"] .lm-settings-actions .primary-button {
+  background: linear-gradient(115deg, #7653d8, #9871ed) !important;
+  color: #fff !important;
+}
+
+/* 5. PRIVACY OPTIONS */
+
+html[data-theme="dark"] .memory-privacy-section {
+  background: linear-gradient(145deg, #29233d, #302644) !important;
+  border: 1px solid #5a4874 !important;
+}
+
+html[data-theme="dark"] .memory-privacy-section .privacy-profile-option {
+  background: #362b4c !important;
+  color: #f0e8ff !important;
+  border: 1px solid #5a4874 !important;
+}
+
+html[data-theme="dark"] .memory-privacy-section .privacy-profile-option:hover {
+  background: #48365f !important;
+  border-color: #a78bfa !important;
+}
+
+html[data-theme="dark"] .memory-privacy-section .privacy-profile-option input {
+  accent-color: #a78bfa !important;
+}
+
+/* 6. CONTRAST AND FOCUS */
+
+html[data-theme="dark"] .chat-section button:focus-visible,
+html[data-theme="dark"] .profile-card button:focus-visible,
+html[data-theme="dark"] .lm-settings-page button:focus-visible {
+  outline: 2px solid #c3aaff !important;
+  outline-offset: 3px;
+}
+
+/* =====================================================
+   TIME CAPSULES — MIDNIGHT LAVENDER FINAL THEME
+   ===================================================== */
+
+html[data-theme="dark"] .tc-page {
+  color: #f5efff !important;
+}
+
+/* Main cards */
+
+html[data-theme="dark"] .tc-card {
+  background: linear-gradient(145deg, #252039, #2c2440) !important;
+  border: 1px solid #514268 !important;
+  border-radius: 18px !important;
+  color: #f5efff !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="dark"] .tc-card-heading h3 {
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .tc-eyebrow {
+  color: #c0aaff !important;
+}
+
+html[data-theme="dark"] .tc-heading-icon {
+  background: #403258 !important;
+  color: #d9c5ff !important;
+}
+
+/* Form */
+
+html[data-theme="dark"] .tc-form > label {
+  color: #e8def8 !important;
+}
+
+html[data-theme="dark"] .tc-form input:not([type="checkbox"]),
+html[data-theme="dark"] .tc-form textarea,
+html[data-theme="dark"] .tc-form select {
+  background: #191526 !important;
+  color: #f5efff !important;
+  border: 1px solid #57466f !important;
+  border-radius: 10px !important;
+}
+
+html[data-theme="dark"] .tc-form input::placeholder,
+html[data-theme="dark"] .tc-form textarea::placeholder {
+  color: #a99cbe !important;
+}
+
+html[data-theme="dark"] .tc-form input:focus,
+html[data-theme="dark"] .tc-form textarea:focus,
+html[data-theme="dark"] .tc-form select:focus {
+  border-color: #ad92f5 !important;
+  box-shadow: 0 0 0 3px rgba(169, 138, 247, 0.17) !important;
+}
+
+html[data-theme="dark"] .tc-form input[type="checkbox"] {
+  accent-color: #a98af7;
+}
+
+/* Memory attachments */
+
+html[data-theme="dark"] .tc-attachments {
+  background: #1d192c !important;
+  border: 1px solid #514268 !important;
+  border-radius: 13px !important;
+  padding: 15px !important;
+}
+
+html[data-theme="dark"] .tc-attachment-heading strong {
+  color: #f0e7ff !important;
+}
+
+html[data-theme="dark"] .tc-attachment-heading small {
+  color: #b9acca !important;
+}
+
+html[data-theme="dark"] .tc-memory-picker {
+  background: transparent !important;
+}
+
+html[data-theme="dark"] .tc-memory-option {
+  background: #302743 !important;
+  border: 1px solid #514268 !important;
+  border-radius: 10px !important;
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .tc-memory-option:hover {
+  background: #3b2e53 !important;
+  border-color: #9277c4 !important;
+}
+
+html[data-theme="dark"] .tc-memory-option input {
+  accent-color: #ad92f5 !important;
+  width: 18px;
+  height: 18px;
+}
+
+html[data-theme="dark"] .tc-memory-kind {
+  background: #45365f !important;
+  color: #e1d2ff !important;
+}
+
+html[data-theme="dark"] .tc-memory-name strong {
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .tc-memory-name small {
+  color: #b9acca !important;
+}
+
+/* Privacy/security information */
+
+html[data-theme="dark"] .tc-security-note {
+  background: linear-gradient(120deg, #352849, #403154) !important;
+  border: 1px solid #65517e !important;
+  border-radius: 11px !important;
+  color: #eee5ff !important;
+}
+
+html[data-theme="dark"] .tc-security-note p {
+  color: #ded1f2 !important;
+}
+
+/* Create capsule button */
+
+html[data-theme="dark"] .tc-submit,
+html[data-theme="dark"] .tc-open-button,
+html[data-theme="dark"] .tc-modal-done {
+  background: linear-gradient(120deg, #7653d8, #9871ed) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 11px !important;
+  font-weight: 750;
+}
+
+html[data-theme="dark"] .tc-submit:hover,
+html[data-theme="dark"] .tc-open-button:hover,
+html[data-theme="dark"] .tc-modal-done:hover {
+  background: linear-gradient(120deg, #8968e8, #aa83ff) !important;
+}
+
+/* Refresh button */
+
+html[data-theme="dark"] .tc-refresh {
+  background: #3a2e52 !important;
+  border: 1px solid #685483 !important;
+  color: #eee4ff !important;
+  border-radius: 9px !important;
+}
+
+html[data-theme="dark"] .tc-refresh:hover {
+  background: #4a3967 !important;
+}
+
+/* Capsule list */
+
+html[data-theme="dark"] .tc-capsule-list {
+  background: transparent !important;
+}
+
+html[data-theme="dark"] .tc-capsule-item,
+html[data-theme="dark"] .tc-capsule-item.is-sealed,
+html[data-theme="dark"] .tc-capsule-item.is-ready {
+  background: linear-gradient(145deg, #302743, #292238) !important;
+  border: 1px solid #56456f !important;
+  border-radius: 14px !important;
+  color: #f5efff !important;
+  padding: 17px !important;
+}
+
+html[data-theme="dark"] .tc-capsule-item h4 {
+  color: #f5efff !important;
+  font-size: 15px;
+}
+
+html[data-theme="dark"] .tc-recipient {
+  color: #c6b8db !important;
+}
+
+html[data-theme="dark"] .tc-date-line {
+  border-color: #514268 !important;
+  color: #c0b3d3 !important;
+}
+
+html[data-theme="dark"] .tc-date-line strong {
+  color: #f0e7ff !important;
+}
+
+html[data-theme="dark"] .tc-created,
+html[data-theme="dark"] .tc-muted,
+html[data-theme="dark"] .tc-locked-hint {
+  color: #baadcf !important;
+}
+
+/* Sealed / Ready labels */
+
+html[data-theme="dark"] .tc-status.sealed {
+  background: #44345f !important;
+  color: #e5d7ff !important;
+  border: 1px solid #685188 !important;
+}
+
+html[data-theme="dark"] .tc-status.ready {
+  background: #254b40 !important;
+  color: #b9f1d1 !important;
+  border: 1px solid #39785f !important;
+}
+
+/* Countdown */
+
+html[data-theme="dark"] .tc-countdown {
+  background: linear-gradient(120deg, #44335f, #514071) !important;
+  color: #f1e9ff !important;
+  border: 1px solid #705891 !important;
+  border-radius: 9px !important;
+}
+
+/* Delete capsule button */
+
+html[data-theme="dark"] .tc-delete {
+  background: #3b2c4c !important;
+  color: #d9c5f4 !important;
+}
+
+html[data-theme="dark"] .tc-delete:hover {
+  background: #593344 !important;
+  color: #ffd9df !important;
+}
+
+/* Empty state */
+
+html[data-theme="dark"] .tc-empty {
+  background: transparent !important;
+}
+
+html[data-theme="dark"] .tc-empty-icon {
+  background: #413258 !important;
+  color: #d4bcff !important;
+}
+
+html[data-theme="dark"] .tc-empty h4 {
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .tc-empty p {
+  color: #bcb0d0 !important;
+}
+
+/* Alerts */
+
+html[data-theme="dark"] .tc-alert-error {
+  background: #482b39 !important;
+  border: 1px solid #86516a !important;
+  color: #ffdce7 !important;
+}
+
+html[data-theme="dark"] .tc-alert-success {
+  background: #244438 !important;
+  border: 1px solid #41765d !important;
+  color: #d1ffe5 !important;
+}
+
+/* Capsule opened modal */
+
+html[data-theme="dark"] .tc-modal-backdrop {
+  background: rgba(9, 7, 18, 0.82) !important;
+}
+
+html[data-theme="dark"] .tc-modal {
+  background: linear-gradient(145deg, #28213b, #211b32) !important;
+  border: 1px solid #675184 !important;
+  border-radius: 19px !important;
+  color: #f5efff !important;
+  box-shadow: 0 25px 90px rgba(0, 0, 0, 0.5);
+}
+
+html[data-theme="dark"] .tc-modal h2,
+html[data-theme="dark"] .tc-modal-memories h3 {
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .tc-modal-recipient,
+html[data-theme="dark"] .tc-modal-date {
+  color: #c5b7dc !important;
+}
+
+html[data-theme="dark"] .tc-modal-close {
+  background: #403253 !important;
+  color: #eee2ff !important;
+  border: 1px solid #64517e !important;
+}
+
+html[data-theme="dark"] .tc-letter {
+  background: #342945 !important;
+  border-left: 3px solid #a78bfa !important;
+  color: #efe5ff !important;
+}
+
+html[data-theme="dark"] .tc-opened-memory {
+  background: #302743 !important;
+  border: 1px solid #55436d !important;
+  border-radius: 11px !important;
+}
+
+html[data-theme="dark"] .tc-opened-memory strong {
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .tc-opened-memory small,
+html[data-theme="dark"] .tc-opened-memory p {
+  color: #c5b8d9 !important;
+}
+
+/* =========================================================
+   FINAL ACCESSIBILITY / CONTRAST OVERRIDES
+   These rules intentionally come last to fix dark text on
+   dark surfaces and pale text on white surfaces.
+   Light mode is not affected.
+   ========================================================= */
+
+html[data-theme="dark"] {
+  --lm-page: #12101d;
+  --lm-sidebar: #211a35;
+  --lm-topbar: #211a34;
+  --lm-surface: #28223b;
+  --lm-surface-soft: #332947;
+  --lm-input: #191526;
+  --lm-ink: #fbf8ff;
+  --lm-text: #eee7f8;
+  --lm-muted: #d0c5df;
+  --lm-line: #57476f;
+  --lm-line-soft: #443653;
+  --lm-purple: #b99aff;
+  --lm-purple-dark: #d0baff;
+  --lm-lavender: #40315b;
+}
+
+/* Give the application a readable default foreground. */
+html[data-theme="dark"] body,
+html[data-theme="dark"] #root,
+html[data-theme="dark"] .app,
+html[data-theme="dark"] .lm-app-shell,
+html[data-theme="dark"] .lm-main-column,
+html[data-theme="dark"] .lm-content,
+html[data-theme="dark"] .tc-page {
+  color: #eee8f7 !important;
+}
+
+/* Fix text that was staying nearly black on plum surfaces. */
+html[data-theme="dark"] .lm-content h1,
+html[data-theme="dark"] .lm-content h2,
+html[data-theme="dark"] .lm-content h3,
+html[data-theme="dark"] .lm-content h4,
+html[data-theme="dark"] .lm-content h5,
+html[data-theme="dark"] .lm-content h6,
+html[data-theme="dark"] .lm-content p,
+html[data-theme="dark"] .lm-content label,
+html[data-theme="dark"] .lm-content legend,
+html[data-theme="dark"] .lm-content span,
+html[data-theme="dark"] .lm-content strong,
+html[data-theme="dark"] .lm-content small,
+html[data-theme="dark"] .lm-content li,
+html[data-theme="dark"] .lm-content dt,
+html[data-theme="dark"] .lm-content dd,
+html[data-theme="dark"] .lm-content a,
+html[data-theme="dark"] .tc-page h1,
+html[data-theme="dark"] .tc-page h2,
+html[data-theme="dark"] .tc-page h3,
+html[data-theme="dark"] .tc-page h4,
+html[data-theme="dark"] .tc-page p,
+html[data-theme="dark"] .tc-page label,
+html[data-theme="dark"] .tc-page span,
+html[data-theme="dark"] .tc-page strong,
+html[data-theme="dark"] .tc-page small,
+html[data-theme="dark"] .tc-page li {
+  color: #eee8f7 !important;
+}
+
+/* Titles should be brighter than supporting copy. */
+html[data-theme="dark"] .lm-content h1,
+html[data-theme="dark"] .lm-content h2,
+html[data-theme="dark"] .lm-content h3,
+html[data-theme="dark"] .lm-content h4,
+html[data-theme="dark"] .lm-content h5,
+html[data-theme="dark"] .lm-content h6,
+html[data-theme="dark"] .tc-page h1,
+html[data-theme="dark"] .tc-page h2,
+html[data-theme="dark"] .tc-page h3,
+html[data-theme="dark"] .tc-page h4 {
+  color: #fffaff !important;
+}
+
+/* Muted copy remains readable; avoid low-contrast lavender-grey. */
+html[data-theme="dark"] .lm-content p,
+html[data-theme="dark"] .lm-content small,
+html[data-theme="dark"] .lm-content .muted,
+html[data-theme="dark"] .lm-content [class*="subtitle"],
+html[data-theme="dark"] .lm-content [class*="description"],
+html[data-theme="dark"] .tc-page p,
+html[data-theme="dark"] .tc-page small,
+html[data-theme="dark"] .tc-page [class*="muted"],
+html[data-theme="dark"] .tc-page [class*="description"] {
+  color: #d3c9e1 !important;
+}
+
+/* Darken remaining light card / form surfaces consistently. */
+html[data-theme="dark"] .lm-content article,
+html[data-theme="dark"] .lm-content fieldset,
+html[data-theme="dark"] .lm-content [class*="card"],
+html[data-theme="dark"] .lm-content [class*="panel"],
+html[data-theme="dark"] .lm-content [class*="filter"],
+html[data-theme="dark"] .lm-content [class*="privacy"],
+html[data-theme="dark"] .lm-content [class*="upload"],
+html[data-theme="dark"] .lm-content [class*="recorder"],
+html[data-theme="dark"] .lm-content [class*="family"],
+html[data-theme="dark"] .lm-content [class*="grandparent"],
+html[data-theme="dark"] .lm-content [class*="suggestion"],
+html[data-theme="dark"] .tc-page .tc-card,
+html[data-theme="dark"] .tc-page .tc-attachments,
+html[data-theme="dark"] .tc-page .tc-memory-option,
+html[data-theme="dark"] .tc-page .tc-capsule-item,
+html[data-theme="dark"] .tc-page .tc-modal,
+html[data-theme="dark"] .tc-page .tc-opened-memory {
+  background-color: #28223b !important;
+  border-color: #57476f !important;
+  color: #eee8f7 !important;
+}
+
+/* Keep main decorative gradients and app surfaces attractive. */
+html[data-theme="dark"] .lm-welcome,
+html[data-theme="dark"] .tc-hero,
+html[data-theme="dark"] .tc-hero-card,
+html[data-theme="dark"] .lm-content [class*="hero"],
+html[data-theme="dark"] .lm-content [class*="banner"] {
+  background: linear-gradient(125deg, #302447, #453363 65%, #57417a) !important;
+  border-color: #705b91 !important;
+  color: #fffaff !important;
+}
+
+/* Prevent generic surface rules from recolouring small icon tiles. */
+html[data-theme="dark"] .lm-content [class*="icon"],
+html[data-theme="dark"] .lm-content [class*="avatar"],
+html[data-theme="dark"] .tc-page [class*="icon"] {
+  color: #ddcaff !important;
+}
+
+/* All normal controls use a dark field and a clear foreground. */
+html[data-theme="dark"]
+  .lm-content
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+html[data-theme="dark"] .lm-content textarea,
+html[data-theme="dark"] .lm-content select,
+html[data-theme="dark"]
+  .tc-page
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+html[data-theme="dark"] .tc-page textarea,
+html[data-theme="dark"] .tc-page select {
+  background: #191526 !important;
+  color: #fffaff !important;
+  border: 1px solid #66547f !important;
+  -webkit-text-fill-color: #fffaff !important;
+}
+
+html[data-theme="dark"] .lm-content input::placeholder,
+html[data-theme="dark"] .lm-content textarea::placeholder,
+html[data-theme="dark"] .tc-page input::placeholder,
+html[data-theme="dark"] .tc-page textarea::placeholder {
+  color: #c2b6d3 !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #c2b6d3 !important;
+}
+
+html[data-theme="dark"] .lm-content option,
+html[data-theme="dark"] .tc-page option {
+  background: #211b31 !important;
+  color: #fffaff !important;
+}
+
+html[data-theme="dark"] input[type="checkbox"],
+html[data-theme="dark"] input[type="radio"] {
+  accent-color: #b99aff !important;
+}
+
+/* Buttons that are not primary should never remain white with pale text. */
+html[data-theme="dark"]
+  .lm-content
+  button:not(.primary-button):not(.lm-add-main):not([type="submit"]),
+html[data-theme="dark"]
+  .tc-page
+  button:not(.tc-submit):not(.tc-open-button):not(.tc-modal-done) {
+  background: #403154 !important;
+  color: #fffaff !important;
+  border: 1px solid #735d91 !important;
+}
+
+html[data-theme="dark"]
+  .lm-content
+  button:not(.primary-button):not(.lm-add-main):not([type="submit"]):hover,
+html[data-theme="dark"]
+  .tc-page
+  button:not(.tc-submit):not(.tc-open-button):not(.tc-modal-done):hover {
+  background: #51406d !important;
+  border-color: #a98af7 !important;
+  color: #fffaff !important;
+}
+
+/* Primary actions stay vivid purple. */
+html[data-theme="dark"] .lm-content button.primary-button,
+html[data-theme="dark"] .lm-content button.lm-add-main,
+html[data-theme="dark"] .lm-content button[type="submit"],
+html[data-theme="dark"] .tc-page .tc-submit,
+html[data-theme="dark"] .tc-page .tc-open-button,
+html[data-theme="dark"] .tc-page .tc-modal-done {
+  background: linear-gradient(115deg, #7653d8, #9871ed) !important;
+  color: #ffffff !important;
+  border: 1px solid #a78bfa !important;
+}
+
+/* Destructive actions use a readable dark rose instead of white. */
+html[data-theme="dark"] .lm-content button[class*="delete"],
+html[data-theme="dark"] .lm-content button[class*="remove"],
+html[data-theme="dark"] .tc-page .tc-delete {
+  background: #542f45 !important;
+  border: 1px solid #98617b !important;
+  color: #ffeaf1 !important;
+}
+
+/* Disabled controls remain legible. */
+html[data-theme="dark"] .lm-content button:disabled,
+html[data-theme="dark"] .tc-page button:disabled,
+html[data-theme="dark"] .lm-content input:disabled,
+html[data-theme="dark"] .lm-content select:disabled,
+html[data-theme="dark"] .lm-content textarea:disabled {
+  opacity: 0.78 !important;
+  color: #d8cfe4 !important;
+  -webkit-text-fill-color: #d8cfe4 !important;
+}
+
+/* Chat messages, welcome state and suggestion pills. */
+html[data-theme="dark"] .chat-section,
+html[data-theme="dark"] .chat-history {
+  color: #eee8f7 !important;
+}
+
+html[data-theme="dark"] .chat-section button,
+html[data-theme="dark"] .chat-history button,
+html[data-theme="dark"] .chat-suggestions button {
+  background: #403154 !important;
+  color: #fffaff !important;
+  border: 1px solid #735d91 !important;
+}
+
+html[data-theme="dark"] .empty-chat {
+  background: linear-gradient(135deg, #302644, #3b2d53) !important;
+  border: 1px solid #705b91 !important;
+  color: #fffaff !important;
+}
+
+html[data-theme="dark"] .empty-chat h1,
+html[data-theme="dark"] .empty-chat h2,
+html[data-theme="dark"] .empty-chat h3,
+html[data-theme="dark"] .empty-chat p {
+  color: #fffaff !important;
+}
+
+/* Profile cards and all actions inside them. */
+html[data-theme="dark"] .profile-card {
+  background: linear-gradient(145deg, #29233d, #211c32) !important;
+  border: 1px solid #57476f !important;
+  color: #f5efff !important;
+}
+
+html[data-theme="dark"] .profile-card h1,
+html[data-theme="dark"] .profile-card h2,
+html[data-theme="dark"] .profile-card h3,
+html[data-theme="dark"] .profile-card p,
+html[data-theme="dark"] .profile-card span,
+html[data-theme="dark"] .profile-card small {
+  color: #eee8f7 !important;
+}
+
+html[data-theme="dark"] .profile-card button {
+  background: #403154 !important;
+  color: #fffaff !important;
+  border: 1px solid #735d91 !important;
+}
+
+html[data-theme="dark"] .profile-card button.primary-button {
+  background: linear-gradient(115deg, #7653d8, #9871ed) !important;
+  color: #ffffff !important;
+  border: 1px solid #a78bfa !important;
+}
+
+html[data-theme="dark"] .profile-card button[class*="delete"] {
+  background: #542f45 !important;
+  color: #ffeaf1 !important;
+  border-color: #98617b !important;
+}
+
+/* Voice memories: keep recording titles, metadata and links readable. */
+html[data-theme="dark"] .lm-content [class*="voice"] h1,
+html[data-theme="dark"] .lm-content [class*="voice"] h2,
+html[data-theme="dark"] .lm-content [class*="voice"] h3,
+html[data-theme="dark"] .lm-content [class*="voice"] p,
+html[data-theme="dark"] .lm-content [class*="voice"] span,
+html[data-theme="dark"] .lm-content [class*="voice"] strong,
+html[data-theme="dark"] .lm-content [class*="voice"] small {
+  color: #eee8f7 !important;
+}
+
+/* Settings page labels and values. */
+html[data-theme="dark"] .lm-settings-page,
+html[data-theme="dark"] .lm-settings-page * {
+  color: #eee8f7 !important;
+}
+
+html[data-theme="dark"] .lm-settings-page h1,
+html[data-theme="dark"] .lm-settings-page h2,
+html[data-theme="dark"] .lm-settings-page h3,
+html[data-theme="dark"] .lm-settings-page strong {
+  color: #fffaff !important;
+}
+
+/* Time capsule text must remain readable on every capsule surface. */
+html[data-theme="dark"] .tc-page,
+html[data-theme="dark"] .tc-page * {
+  color: #eee8f7 !important;
+}
+
+html[data-theme="dark"] .tc-page h1,
+html[data-theme="dark"] .tc-page h2,
+html[data-theme="dark"] .tc-page h3,
+html[data-theme="dark"] .tc-page h4,
+html[data-theme="dark"] .tc-page strong {
+  color: #fffaff !important;
+}
+
+html[data-theme="dark"] .tc-page .tc-status,
+html[data-theme="dark"] .tc-page .tc-countdown {
+  color: #fffaff !important;
+}
+
+html[data-theme="dark"] .tc-page .tc-security-note {
+  background: #3b2e52 !important;
+  color: #f5efff !important;
+  border: 1px solid #705b91 !important;
+}
+
+/* Keyboard focus is visible against dark surfaces. */
+html[data-theme="dark"] .lm-content :focus-visible,
+html[data-theme="dark"] .tc-page :focus-visible {
+  outline: 2px solid #d0baff !important;
+  outline-offset: 3px;
+}

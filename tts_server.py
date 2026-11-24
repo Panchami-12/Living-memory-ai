@@ -100,7 +100,7 @@ Text to speak:
 
     response = gemini_client.models.generate_content(
         model=GEMINI_TTS_MODEL,
-        contents=prompt,
+        contents=text,
         config=types.GenerateContentConfig(
             response_modalities=["AUDIO"],
             speech_config=types.SpeechConfig(

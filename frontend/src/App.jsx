@@ -3,6 +3,9 @@ import { AuthenticatedImage, AuthenticatedAudio } from "./AuthenticatedMedia";
 import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 import "./DashboardLayout.css";
+import "./Theme.css";
+import "./FamilyDashboardLogin.css";
+
 import TimeCapsules from "./TimeCapsules";
 import VoiceRecorder from "./VoiceRecorder";
 import GrandparentsMode from "./GrandparentsMode";
@@ -29,7 +32,21 @@ function App() {
   const [authPassword, setAuthPassword] = useState("");
   const [authMessage, setAuthMessage] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
-
+  // FAMILY LOGIN
+  const [accountType, setAccountType] = useState(
+    localStorage.getItem("account_type") || "owner",
+  );
+  const [familyOwnerEmail, setFamilyOwnerEmail] = useState(
+    localStorage.getItem("email") || "",
+  );
+  const [familyProfiles, setFamilyProfiles] = useState([]);
+  const [selectedFamilyProfileId, setSelectedFamilyProfileId] = useState("");
+  const [familyLoginPin, setFamilyLoginPin] = useState("");
+  const [familyLoginMessage, setFamilyLoginMessage] = useState("");
+  const [familyProfilesLoading, setFamilyProfilesLoading] = useState(false);
+  const [familyLoginLoading, setFamilyLoginLoading] = useState(false);
+  const [showFamilyDashboardLogin, setShowFamilyDashboardLogin] =
+    useState(false);
   const [userId, setUserId] = useState(
     Number(localStorage.getItem("user_id")) || null,
   );
@@ -106,7 +123,12 @@ function App() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState(null);
   const [deletingProfile, setDeletingProfile] = useState(false);
-  const [profileDeleteError, setProfileDeleteError] = useState("");
+  // FAMILY PROFILE PIN MANAGEMENT
+  const [pinProfileId, setPinProfileId] = useState(null);
+  const [familyPin, setFamilyPin] = useState("");
+  const [confirmFamilyPin, setConfirmFamilyPin] = useState("");
+  const [familyPinError, setFamilyPinError] = useState("");
+  const [familyPinSaving, setFamilyPinSaving] = useState(false);
   const [activePage, setActivePage] = useState("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   // =====================================================
@@ -1583,10 +1605,27 @@ function App() {
     { id: "grandparents", label: wt.grandparentsMode, icon: "❤️" },
     { id: "settings", label: dashboardNav.settings, icon: "⚙" },
   ];
-  const dashboardPageTitle =
-    dashboardNavItems.find((item) => item.id === activePage)?.label ||
-    dashboardNav.dashboard;
+  // FAMILY MEMBER NAVIGATION
+  const familyAllowedPages = [
+    "dashboard",
+    "memories",
+    "chat",
+    "voice",
+    "photos",
+  ];
 
+  const visibleDashboardNavItems =
+    accountType === "family"
+      ? dashboardNavItems.filter((item) => familyAllowedPages.includes(item.id))
+      : dashboardNavItems;
+  const dashboardPageTitle =
+    visibleDashboardNavItems.find((item) => item.id === activePage)?.label ||
+    dashboardNav.dashboard;
+  useEffect(() => {
+    if (accountType === "family" && !familyAllowedPages.includes(activePage)) {
+      setActivePage("dashboard");
+    }
+  }, [accountType, activePage]);
   const profileTranslations = {
     English: {
       label: "👥 RELATIONSHIP PROFILES",
@@ -2168,7 +2207,9 @@ function App() {
           "Login response did not include an authentication token.",
         );
       }
-
+      localStorage.setItem("account_type", "owner");
+      localStorage.removeItem("family_profile_id");
+      setAccountType("owner");
       localStorage.setItem("access_token", data.access_token);
       localStorage.setItem("loggedIn", "true");
 
@@ -2195,7 +2236,131 @@ function App() {
       setAuthLoading(false);
     }
   };
+  // =====================================================
+  // LOAD FAMILY PROFILES FOR PIN LOGIN
+  // =====================================================
 
+  const loadFamilyProfiles = async (event) => {
+    event.preventDefault();
+    setFamilyLoginMessage("");
+    setFamilyProfiles([]);
+
+    if (!familyOwnerEmail.trim()) {
+      setFamilyLoginMessage("Enter the owner's email address.");
+      return;
+    }
+
+    setFamilyProfilesLoading(true);
+
+    try {
+      const response = await apiFetch(`${API}/users/family-profiles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner_email: familyOwnerEmail.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Could not load family profiles.");
+      }
+
+      const availableProfiles = Array.isArray(data.profiles)
+        ? data.profiles
+        : [];
+
+      setFamilyProfiles(availableProfiles);
+
+      if (availableProfiles.length > 0) {
+        setSelectedFamilyProfileId(String(availableProfiles[0].id));
+        setFamilyLoginMessage("Select your profile and enter your PIN.");
+      } else {
+        setFamilyLoginMessage(
+          "No family login PINs have been configured for this account yet.",
+        );
+      }
+    } catch (error) {
+      setFamilyLoginMessage(error.message || "Could not load family profiles.");
+    } finally {
+      setFamilyProfilesLoading(false);
+    }
+  };
+
+  // =====================================================
+  // FAMILY PIN LOGIN
+  // =====================================================
+
+  const handleFamilyLogin = async (event) => {
+    event.preventDefault();
+    setFamilyLoginMessage("");
+
+    if (!selectedFamilyProfileId) {
+      setFamilyLoginMessage("Please select your family profile.");
+      return;
+    }
+
+    if (!/^\d{6}$/.test(familyLoginPin)) {
+      setFamilyLoginMessage("Enter your six-digit PIN.");
+      return;
+    }
+
+    setFamilyLoginLoading(true);
+
+    try {
+      const response = await apiFetch(`${API}/users/family-login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          owner_email: familyOwnerEmail.trim(),
+          profile_id: Number(selectedFamilyProfileId),
+          pin: familyLoginPin,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Family login failed.");
+      }
+
+      if (!data.access_token || !data.user_id || !data.profile_id) {
+        throw new Error("The server returned incomplete login details.");
+      }
+
+      // Store this separate family session.
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("loggedIn", "true");
+      localStorage.setItem("user_id", String(data.user_id));
+      localStorage.setItem("username", data.username);
+      localStorage.setItem("email", familyOwnerEmail.trim());
+      localStorage.setItem("account_type", "family");
+      localStorage.setItem("family_profile_id", String(data.profile_id));
+
+      setAccountType("family");
+      setUserId(Number(data.user_id));
+      setAuthEmail(familyOwnerEmail.trim());
+      setAuthUsername(data.username);
+      setLoggedIn(true);
+
+      setProfiles([]);
+      setMemories([]);
+      setMessages([]);
+      setSearchResults([]);
+      setActivePage("dashboard");
+
+      setFamilyLoginPin("");
+      setFamilyLoginMessage("");
+      setShowFamilyDashboardLogin(false);
+      setAuthPassword("");
+    } catch (error) {
+      setFamilyLoginMessage(error.message || "Family login failed.");
+      setFamilyLoginPin("");
+    } finally {
+      setFamilyLoginLoading(false);
+    }
+  };
   // =====================================================
   // LOGOUT
   // =====================================================
@@ -2204,7 +2369,14 @@ function App() {
     localStorage.removeItem("loggedIn");
     localStorage.removeItem("access_token");
     localStorage.removeItem("user_id");
-
+    localStorage.removeItem("account_type");
+    localStorage.removeItem("family_profile_id");
+    setAccountType("owner");
+    setShowFamilyDashboardLogin(false);
+    setFamilyProfiles([]);
+    setSelectedFamilyProfileId("");
+    setFamilyLoginPin("");
+    setFamilyLoginMessage("");
     localStorage.removeItem("email");
 
     localStorage.removeItem("username");
@@ -2258,7 +2430,15 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (!loggedIn || !userId) return;
+    if (!loggedIn || !userId) {
+      setMemories([]);
+      if (accountType === "family") setProfiles([]);
+      return;
+    }
+
+    if (accountType === "family") {
+      setProfiles([]);
+    }
 
     let cancelled = false;
 
@@ -2293,7 +2473,7 @@ function App() {
     return () => {
       cancelled = true;
     };
-  }, [loggedIn, userId]);
+  }, [loggedIn, userId, accountType]);
   // =====================================================
   // SAVE MEMORY
   // =====================================================
@@ -2774,7 +2954,18 @@ function App() {
       cancelled = true;
     };
   }, [loggedIn, userId]);
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("theme") === "dark" ? "dark" : "light";
+  });
 
+  const toggleTheme = () => {
+    setTheme((current) => (current === "dark" ? "light" : "dark"));
+  };
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+  }, [theme]);
   // =====================================================
   // CREATE PROFILE
   // =====================================================
@@ -3026,7 +3217,108 @@ function App() {
       label: ui.other,
     },
   ];
+  // =====================================================
+  // SAVE FAMILY PROFILE PIN
+  // =====================================================
 
+  const saveFamilyPin = async (event) => {
+    event.preventDefault();
+
+    const profileId = Number(pinProfileId);
+
+    if (!/^\d{6}$/.test(familyPin)) {
+      setFamilyPinError("PIN must contain exactly 6 digits.");
+      return;
+    }
+
+    if (familyPin !== confirmFamilyPin) {
+      setFamilyPinError("PINs do not match.");
+      return;
+    }
+
+    if (!userId || !profileId) return;
+
+    setFamilyPinSaving(true);
+    setFamilyPinError("");
+
+    try {
+      const response = await apiFetch(
+        `${API}/profiles/${profileId}/pin?user_id=${userId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ pin: familyPin }),
+        },
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Could not save PIN.");
+      }
+
+      setProfiles((previous) =>
+        previous.map((profile) =>
+          Number(profile.id) === profileId
+            ? { ...profile, pin_enabled: true }
+            : profile,
+        ),
+      );
+
+      setFamilyPin("");
+      setConfirmFamilyPin("");
+      setPinProfileId(null);
+
+      window.alert("Family PIN saved successfully.");
+    } catch (error) {
+      setFamilyPinError(error.message || "Could not save PIN.");
+    } finally {
+      setFamilyPinSaving(false);
+    }
+  };
+
+  // =====================================================
+  // REMOVE FAMILY PROFILE PIN
+  // =====================================================
+
+  const removeFamilyPin = async (profileId) => {
+    if (!window.confirm("Remove family login PIN for this profile?")) {
+      return;
+    }
+
+    setFamilyPinSaving(true);
+    setFamilyPinError("");
+
+    try {
+      const response = await apiFetch(
+        `${API}/profiles/${profileId}/pin?user_id=${userId}`,
+        { method: "DELETE" },
+      );
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.detail || "Could not remove PIN.");
+      }
+
+      setProfiles((previous) =>
+        previous.map((profile) =>
+          Number(profile.id) === Number(profileId)
+            ? { ...profile, pin_enabled: false }
+            : profile,
+        ),
+      );
+
+      setPinProfileId(null);
+      window.alert("Family PIN removed successfully.");
+    } catch (error) {
+      setFamilyPinError(error.message || "Could not remove PIN.");
+    } finally {
+      setFamilyPinSaving(false);
+    }
+  };
   // =====================================================
   // LOGIN / SIGNUP PAGE
   // =====================================================
@@ -3044,6 +3336,14 @@ function App() {
               <p>{ui.memoriesLive}</p>
             </div>
           </div>
+          <button
+            type="button"
+            className="theme-toggle theme-toggle-login"
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? "☀️ Light mode" : "🌙 Dark mode"}
+          </button>
         </header>
 
         <main className="auth-container">
@@ -3166,7 +3466,7 @@ function App() {
 
         <div className="lm-sidebar-label">{wt.workspace}</div>
         <nav className="lm-side-nav" aria-label={ui.mainNavigation}>
-          {dashboardNavItems.map((item) => (
+          {visibleDashboardNavItems.map((item) => (
             <button
               type="button"
               key={item.id}
@@ -3220,6 +3520,14 @@ function App() {
             <h1>{dashboardPageTitle}</h1>
           </div>
           <div className="lm-topbar-actions">
+            <button
+              type="button"
+              className="theme-toggle"
+              onClick={toggleTheme}
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
+            </button>
             <label className="lm-language-control">
               <span>🌐</span>
               <select
@@ -3274,14 +3582,159 @@ function App() {
                   </h2>
                   <p>{wt.welcomeDescription}</p>
                 </div>
-                <button
-                  type="button"
-                  className="primary-button lm-add-main"
-                  onClick={() => setActivePage("memories")}
-                >
-                  {wt.addMemory}
-                </button>
+
+                {accountType !== "family" && (
+                  <div className="lm-welcome-actions">
+                    <button
+                      type="button"
+                      className="secondary-button lm-family-login-trigger"
+                      aria-expanded={showFamilyDashboardLogin}
+                      aria-controls="family-dashboard-login-panel"
+                      onClick={() => {
+                        setFamilyOwnerEmail(
+                          localStorage.getItem("email") || authEmail,
+                        );
+                        setFamilyProfiles([]);
+                        setSelectedFamilyProfileId("");
+                        setFamilyLoginPin("");
+                        setFamilyLoginMessage("");
+                        setShowFamilyDashboardLogin((current) => !current);
+                      }}
+                    >
+                      {showFamilyDashboardLogin
+                        ? "Close Family Login"
+                        : "♡ Family Login"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="primary-button lm-add-main"
+                      onClick={() => setActivePage("memories")}
+                    >
+                      {wt.addMemory}
+                    </button>
+                  </div>
+                )}
               </div>
+
+              {accountType !== "family" && showFamilyDashboardLogin && (
+                <section
+                  id="family-dashboard-login-panel"
+                  className="lm-panel family-dashboard-login-panel"
+                  aria-labelledby="family-dashboard-login-title"
+                >
+                  <div className="lm-panel-heading">
+                    <div>
+                      <span className="lm-eyebrow">FAMILY ACCESS</span>
+                      <h3 id="family-dashboard-login-title">
+                        Family Member Login
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      className="lm-text-button"
+                      onClick={() => {
+                        setShowFamilyDashboardLogin(false);
+                        setFamilyProfiles([]);
+                        setSelectedFamilyProfileId("");
+                        setFamilyLoginPin("");
+                        setFamilyLoginMessage("");
+                      }}
+                    >
+                      Close
+                    </button>
+                  </div>
+
+                  <form
+                    className="family-dashboard-login-form"
+                    onSubmit={loadFamilyProfiles}
+                  >
+                    <label htmlFor="dashboard-family-owner-email">
+                      Owner's email address
+                    </label>
+                    <input
+                      id="dashboard-family-owner-email"
+                      type="email"
+                      value={familyOwnerEmail}
+                      onChange={(event) => {
+                        setFamilyOwnerEmail(event.target.value);
+                        setFamilyProfiles([]);
+                        setSelectedFamilyProfileId("");
+                        setFamilyLoginPin("");
+                        setFamilyLoginMessage("");
+                      }}
+                      autoComplete="email"
+                      required
+                    />
+                    <button type="submit" disabled={familyProfilesLoading}>
+                      {familyProfilesLoading
+                        ? "Loading profiles..."
+                        : "Find Family Profiles"}
+                    </button>
+                  </form>
+
+                  {familyProfiles.length > 0 && (
+                    <form
+                      className="family-dashboard-login-form"
+                      onSubmit={handleFamilyLogin}
+                    >
+                      <label htmlFor="dashboard-family-profile">
+                        Select your profile
+                      </label>
+                      <select
+                        id="dashboard-family-profile"
+                        value={selectedFamilyProfileId}
+                        onChange={(event) => {
+                          setSelectedFamilyProfileId(event.target.value);
+                          setFamilyLoginPin("");
+                          setFamilyLoginMessage("");
+                        }}
+                        required
+                      >
+                        {familyProfiles.map((profile) => (
+                          <option key={profile.id} value={profile.id}>
+                            {profile.name}
+                            {profile.relationship_type
+                              ? ` (${profile.relationship_type})`
+                              : ""}
+                          </option>
+                        ))}
+                      </select>
+
+                      <label htmlFor="dashboard-family-pin">
+                        Six-digit family PIN
+                      </label>
+                      <input
+                        id="dashboard-family-pin"
+                        type="password"
+                        inputMode="numeric"
+                        pattern="[0-9]{6}"
+                        maxLength={6}
+                        autoComplete="current-password"
+                        placeholder="Enter your 6-digit PIN"
+                        value={familyLoginPin}
+                        onChange={(event) =>
+                          setFamilyLoginPin(
+                            event.target.value.replace(/\D/g, "").slice(0, 6),
+                          )
+                        }
+                        required
+                      />
+                      <button type="submit" disabled={familyLoginLoading}>
+                        {familyLoginLoading
+                          ? "Signing in..."
+                          : "Login as Family Member"}
+                      </button>
+                    </form>
+                  )}
+
+                  {familyLoginMessage && (
+                    <p className="message" role="alert">
+                      {familyLoginMessage}
+                    </p>
+                  )}
+                </section>
+              )}
 
               <div className="lm-stat-grid">
                 <button
@@ -3294,16 +3747,18 @@ function App() {
                   <span className="lm-stat-label">{wt.totalMemories}</span>
                   <span className="lm-stat-hint">{wt.openMemoryLibrary}</span>
                 </button>
-                <button
-                  type="button"
-                  className="lm-stat-card"
-                  onClick={() => setActivePage("profiles")}
-                >
-                  <span className="lm-stat-icon">♧</span>
-                  <span className="lm-stat-value">{profiles.length}</span>
-                  <span className="lm-stat-label">{wt.customProfiles}</span>
-                  <span className="lm-stat-hint">{wt.explorePeople}</span>
-                </button>
+                {accountType !== "family" && (
+                  <button
+                    type="button"
+                    className="lm-stat-card"
+                    onClick={() => setActivePage("profiles")}
+                  >
+                    <span className="lm-stat-icon">♧</span>
+                    <span className="lm-stat-value">{profiles.length}</span>
+                    <span className="lm-stat-label">{wt.customProfiles}</span>
+                    <span className="lm-stat-hint">{wt.explorePeople}</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   className="lm-stat-card"
@@ -3350,13 +3805,15 @@ function App() {
                       <span>✧</span>
                       <h4>{wt.storyStarts}</h4>
                       <p>{wt.saveFirstMemory}</p>
-                      <button
-                        type="button"
-                        className="primary-button"
-                        onClick={() => setActivePage("memories")}
-                      >
-                        {wt.createFirstMemory}
-                      </button>
+                      {accountType !== "family" && (
+                        <button
+                          type="button"
+                          className="primary-button"
+                          onClick={() => setActivePage("memories")}
+                        >
+                          {wt.createFirstMemory}
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div className="lm-recent-list">
@@ -3413,39 +3870,45 @@ function App() {
                     </div>
                     <b>→</b>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setActivePage("profiles")}
-                  >
-                    <span>♧</span>
-                    <div>
-                      <strong>{wt.peopleProfiles}</strong>
-                      <small>{wt.exploreMemoriesByPerson}</small>
-                    </div>
-                    <b>→</b>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActivePage("timeline")}
-                  >
-                    <span>◷</span>
-                    <div>
-                      <strong>{wt.memoryTimeline}</strong>
-                      <small>{wt.revisitByDate}</small>
-                    </div>
-                    <b>→</b>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActivePage("settings")}
-                  >
-                    <span>⚙</span>
-                    <div>
-                      <strong>{wt.preferences}</strong>
-                      <small>{wt.manageLanguageAccount}</small>
-                    </div>
-                    <b>→</b>
-                  </button>
+                  {accountType !== "family" && (
+                    <button
+                      type="button"
+                      onClick={() => setActivePage("profiles")}
+                    >
+                      <span>♧</span>
+                      <div>
+                        <strong>{wt.peopleProfiles}</strong>
+                        <small>{wt.exploreMemoriesByPerson}</small>
+                      </div>
+                      <b>→</b>
+                    </button>
+                  )}
+                  {accountType !== "family" && (
+                    <button
+                      type="button"
+                      onClick={() => setActivePage("timeline")}
+                    >
+                      <span>◷</span>
+                      <div>
+                        <strong>{wt.memoryTimeline}</strong>
+                        <small>{wt.revisitByDate}</small>
+                      </div>
+                      <b>→</b>
+                    </button>
+                  )}
+                  {accountType !== "family" && (
+                    <button
+                      type="button"
+                      onClick={() => setActivePage("settings")}
+                    >
+                      <span>⚙</span>
+                      <div>
+                        <strong>{wt.preferences}</strong>
+                        <small>{wt.manageLanguageAccount}</small>
+                      </div>
+                      <b>→</b>
+                    </button>
+                  )}
                 </section>
               </div>
             </section>
@@ -3653,7 +4116,7 @@ function App() {
               {/* =================================================
             EDIT MEMORY
         ================================================= */}
-              {editingMemoryId && (
+              {accountType !== "family" && editingMemoryId && (
                 <section className="card">
                   <h2>{ui.editMemory}</h2>
 
@@ -3758,145 +4221,149 @@ function App() {
               {/* =================================================
             SAVE MEMORY
         ================================================= */}
-              <section id="save-memory">
-                <h2>✨ {ui.saveMemory}</h2>
+              {accountType !== "family" && (
+                <section id="save-memory">
+                  <h2>✨ {ui.saveMemory}</h2>
 
-                <form onSubmit={handleSaveMemory}>
-                  <input
-                    type="text"
-                    placeholder={ui.titlePlaceholder}
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
-                    required
-                  />
-
-                  <textarea
-                    placeholder={ui.memoryPlaceholder}
-                    value={content}
-                    onChange={(event) => setContent(event.target.value)}
-                    required
-                  />
-
-                  <VoiceRecorder
-                    transcriptionLanguage={
-                      languages.find((item) => item.name === language)?.code ||
-                      "en"
-                    }
-                    buttonLabel={wt.recordMemoryButton}
-                    transcriptLabel={wt.transcriptAdded}
-                    onTextGenerated={(text) =>
-                      setContent((previous) =>
-                        previous ? `${previous} ${text}` : text,
-                      )
-                    }
-                    onAudioRecorded={(audioBlob) => {
-                      setSelectedAudio(audioBlob);
-
-                      setMemoryMessage(ui.voiceRecorded);
-                    }}
-                  />
-
-                  {selectedAudio && <p className="message">{ui.voiceReady}</p>}
-
-                  <div className="photo-upload">
-                    <label
-                      htmlFor="memory-image"
-                      className="photo-upload-label"
-                    >
-                      {ui.addPhoto}
-                    </label>
-
+                  <form onSubmit={handleSaveMemory}>
                     <input
-                      id="memory-image"
-                      type="file"
-                      accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-                      onChange={handleImageSelect}
+                      type="text"
+                      placeholder={ui.titlePlaceholder}
+                      value={title}
+                      onChange={(event) => setTitle(event.target.value)}
+                      required
                     />
 
-                    {imagePreview && (
-                      <div className="image-preview">
-                        <img src={imagePreview} alt="Memory preview" />
+                    <textarea
+                      placeholder={ui.memoryPlaceholder}
+                      value={content}
+                      onChange={(event) => setContent(event.target.value)}
+                      required
+                    />
 
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          onClick={clearSelectedImage}
-                        >
-                          {ui.removePhoto}
-                        </button>
-                      </div>
+                    <VoiceRecorder
+                      transcriptionLanguage={
+                        languages.find((item) => item.name === language)
+                          ?.code || "en"
+                      }
+                      buttonLabel={wt.recordMemoryButton}
+                      transcriptLabel={wt.transcriptAdded}
+                      onTextGenerated={(text) =>
+                        setContent((previous) =>
+                          previous ? `${previous} ${text}` : text,
+                        )
+                      }
+                      onAudioRecorded={(audioBlob) => {
+                        setSelectedAudio(audioBlob);
+
+                        setMemoryMessage(ui.voiceRecorded);
+                      }}
+                    />
+
+                    {selectedAudio && (
+                      <p className="message">{ui.voiceReady}</p>
                     )}
-                  </div>
-                  <label htmlFor="memory-profile">{wt.whoseMemory}</label>
 
-                  <select
-                    id="memory-profile"
-                    value={selectedProfileId}
-                    onChange={(event) =>
-                      setSelectedProfileId(event.target.value)
-                    }
-                  >
-                    <option value="">{wt.generalMemory}</option>
-
-                    {profiles.map((profile) => (
-                      <option key={profile.id} value={profile.id}>
-                        {profile.name} ({profile.relationship_type})
-                      </option>
-                    ))}
-                  </select>
-                  <div className="memory-privacy-section">
-                    <h3>{wt.hideMemoryFrom}</h3>
-                    <p>{wt.privacyDescription}</p>
-
-                    {profiles.map((profile) => (
+                    <div className="photo-upload">
                       <label
-                        key={profile.id}
-                        className="privacy-profile-option"
+                        htmlFor="memory-image"
+                        className="photo-upload-label"
                       >
-                        <input
-                          type="checkbox"
-                          value={profile.id}
-                          checked={hiddenFromProfileIds.includes(
-                            Number(profile.id),
-                          )}
-                          onChange={(event) => {
-                            const profileId = Number(event.target.value);
-
-                            setHiddenFromProfileIds((previous) =>
-                              event.target.checked
-                                ? [...previous, profileId]
-                                : previous.filter((id) => id !== profileId),
-                            );
-                          }}
-                        />
-                        {ui.hideFrom} {profile.name}
+                        {ui.addPhoto}
                       </label>
-                    ))}
-                  </div>
-                  <select
-                    value={memoryType}
-                    onChange={(event) => setMemoryType(event.target.value)}
-                  >
-                    {memoryTypes.map((type) => (
-                      <option key={type.value} value={type.value}>
-                        {type.label}
-                      </option>
-                    ))}
-                  </select>
 
-                  <button
-                    type="submit"
-                    className="primary-button"
-                    disabled={saving || uploadingImage || uploadingAudio}
-                  >
-                    {saving || uploadingImage || uploadingAudio
-                      ? ui.saving
-                      : ui.save}
-                  </button>
-                </form>
+                      <input
+                        id="memory-image"
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                        onChange={handleImageSelect}
+                      />
 
-                {memoryMessage && <p className="message">{memoryMessage}</p>}
-              </section>
+                      {imagePreview && (
+                        <div className="image-preview">
+                          <img src={imagePreview} alt="Memory preview" />
+
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            onClick={clearSelectedImage}
+                          >
+                            {ui.removePhoto}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <label htmlFor="memory-profile">{wt.whoseMemory}</label>
+
+                    <select
+                      id="memory-profile"
+                      value={selectedProfileId}
+                      onChange={(event) =>
+                        setSelectedProfileId(event.target.value)
+                      }
+                    >
+                      <option value="">{wt.generalMemory}</option>
+
+                      {profiles.map((profile) => (
+                        <option key={profile.id} value={profile.id}>
+                          {profile.name} ({profile.relationship_type})
+                        </option>
+                      ))}
+                    </select>
+                    <div className="memory-privacy-section">
+                      <h3>{wt.hideMemoryFrom}</h3>
+                      <p>{wt.privacyDescription}</p>
+
+                      {profiles.map((profile) => (
+                        <label
+                          key={profile.id}
+                          className="privacy-profile-option"
+                        >
+                          <input
+                            type="checkbox"
+                            value={profile.id}
+                            checked={hiddenFromProfileIds.includes(
+                              Number(profile.id),
+                            )}
+                            onChange={(event) => {
+                              const profileId = Number(event.target.value);
+
+                              setHiddenFromProfileIds((previous) =>
+                                event.target.checked
+                                  ? [...previous, profileId]
+                                  : previous.filter((id) => id !== profileId),
+                              );
+                            }}
+                          />
+                          {ui.hideFrom} {profile.name}
+                        </label>
+                      ))}
+                    </div>
+                    <select
+                      value={memoryType}
+                      onChange={(event) => setMemoryType(event.target.value)}
+                    >
+                      {memoryTypes.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="submit"
+                      className="primary-button"
+                      disabled={saving || uploadingImage || uploadingAudio}
+                    >
+                      {saving || uploadingImage || uploadingAudio
+                        ? ui.saving
+                        : ui.save}
+                    </button>
+                  </form>
+
+                  {memoryMessage && <p className="message">{memoryMessage}</p>}
+                </section>
+              )}
               {/* =================================================
             MY MEMORIES
         ================================================= */}
@@ -3939,42 +4406,44 @@ function App() {
                   </div>
 
                   <div className="memory-filter-fields">
-                    <div className="memory-filter-field">
-                      <label htmlFor="memory-profile-filter">
-                        {wt.profile}
-                      </label>
+                    {accountType !== "family" && (
+                      <div className="memory-filter-field">
+                        <label htmlFor="memory-profile-filter">
+                          {wt.profile}
+                        </label>
 
-                      <select
-                        id="memory-profile-filter"
-                        value={
-                          activeProfileFilter === null
-                            ? ""
-                            : String(activeProfileFilter)
-                        }
-                        onChange={(event) => {
-                          const value = event.target.value;
+                        <select
+                          id="memory-profile-filter"
+                          value={
+                            activeProfileFilter === null
+                              ? ""
+                              : String(activeProfileFilter)
+                          }
+                          onChange={(event) => {
+                            const value = event.target.value;
 
-                          setActiveProfileFilter(
-                            value === ""
-                              ? null
-                              : value === "unassigned"
-                                ? "unassigned"
-                                : Number(value),
-                          );
-                        }}
-                      >
-                        <option value="">{wt.allProfiles}</option>
-                        <option value="unassigned">
-                          {wt.unassignedMemories}
-                        </option>
-
-                        {profiles.map((profile) => (
-                          <option key={profile.id} value={profile.id}>
-                            {profile.name}
+                            setActiveProfileFilter(
+                              value === ""
+                                ? null
+                                : value === "unassigned"
+                                  ? "unassigned"
+                                  : Number(value),
+                            );
+                          }}
+                        >
+                          <option value="">{wt.allProfiles}</option>
+                          <option value="unassigned">
+                            {wt.unassignedMemories}
                           </option>
-                        ))}
-                      </select>
-                    </div>
+
+                          {profiles.map((profile) => (
+                            <option key={profile.id} value={profile.id}>
+                              {profile.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                     <div className="memory-filter-field">
                       <label htmlFor="memory-type-filter">{wt.category}</label>
                       <select
@@ -4091,23 +4560,25 @@ function App() {
                           )}
                         </div>
 
-                        <div className="memory-actions">
-                          <button
-                            type="button"
-                            className="edit-button"
-                            onClick={() => startEditingMemory(memory)}
-                          >
-                            {ui.edit}
-                          </button>
+                        {accountType !== "family" && (
+                          <div className="memory-actions">
+                            <button
+                              type="button"
+                              className="edit-button"
+                              onClick={() => startEditingMemory(memory)}
+                            >
+                              {ui.edit}
+                            </button>
 
-                          <button
-                            type="button"
-                            className="delete-button"
-                            onClick={() => handleDeleteMemory(memory.id)}
-                          >
-                            {ui.delete}
-                          </button>
-                        </div>
+                            <button
+                              type="button"
+                              className="delete-button"
+                              onClick={() => handleDeleteMemory(memory.id)}
+                            >
+                              {ui.delete}
+                            </button>
+                          </div>
+                        )}
                       </article>
                     ))}
                   </div>
@@ -4193,7 +4664,120 @@ function App() {
                         {profile.description ||
                           profileMoreUi.defaultDescription}
                       </p>
+                      {/* FAMILY PIN MANAGEMENT */}
 
+                      <div className="family-pin-controls">
+                        <div className="family-pin-status">
+                          <span>
+                            {profile.pin_enabled
+                              ? "🔒 Family login enabled"
+                              : "Family login not configured"}
+                          </span>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => {
+                            setPinProfileId(
+                              pinProfileId === profile.id ? null : profile.id,
+                            );
+                            setFamilyPin("");
+                            setConfirmFamilyPin("");
+                            setFamilyPinError("");
+                          }}
+                          disabled={familyPinSaving}
+                        >
+                          {profile.pin_enabled
+                            ? "Change PIN"
+                            : "Set Family PIN"}
+                        </button>
+
+                        {profile.pin_enabled && (
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            onClick={() => removeFamilyPin(profile.id)}
+                            disabled={familyPinSaving}
+                          >
+                            Remove PIN
+                          </button>
+                        )}
+
+                        {pinProfileId === profile.id && (
+                          <form
+                            className="family-pin-form"
+                            onSubmit={saveFamilyPin}
+                          >
+                            <h4>
+                              {profile.pin_enabled
+                                ? "Change Family PIN"
+                                : "Create Family PIN"}
+                            </h4>
+
+                            <input
+                              type="password"
+                              inputMode="numeric"
+                              autoComplete="new-password"
+                              placeholder="Enter 6-digit PIN"
+                              maxLength={6}
+                              value={familyPin}
+                              onChange={(event) =>
+                                setFamilyPin(
+                                  event.target.value
+                                    .replace(/\D/g, "")
+                                    .slice(0, 6),
+                                )
+                              }
+                              required
+                            />
+
+                            <input
+                              type="password"
+                              inputMode="numeric"
+                              autoComplete="new-password"
+                              placeholder="Confirm 6-digit PIN"
+                              maxLength={6}
+                              value={confirmFamilyPin}
+                              onChange={(event) =>
+                                setConfirmFamilyPin(
+                                  event.target.value
+                                    .replace(/\D/g, "")
+                                    .slice(0, 6),
+                                )
+                              }
+                              required
+                            />
+
+                            {familyPinError && (
+                              <p className="message" role="alert">
+                                {familyPinError}
+                              </p>
+                            )}
+
+                            <button
+                              type="submit"
+                              className="primary-button"
+                              disabled={familyPinSaving}
+                            >
+                              {familyPinSaving ? "Saving..." : "Save PIN"}
+                            </button>
+
+                            <button
+                              type="button"
+                              className="secondary-button"
+                              onClick={() => {
+                                setPinProfileId(null);
+                                setFamilyPin("");
+                                setConfirmFamilyPin("");
+                                setFamilyPinError("");
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </form>
+                        )}
+                      </div>
                       <button
                         type="button"
                         className="primary-button"
@@ -4467,26 +5051,30 @@ function App() {
                   <h2>{wt.voiceMemoriesTitle}</h2>
                   <p>{wt.listenSavedRecordings}</p>
                 </div>
-                <button
-                  type="button"
-                  className="primary-button"
-                  onClick={() => setActivePage("memories")}
-                >
-                  {wt.recordMemory}
-                </button>
+                {accountType !== "family" && (
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() => setActivePage("memories")}
+                  >
+                    {wt.recordMemory}
+                  </button>
+                )}
               </div>
               {memories.filter((memory) => memory.audio_url).length === 0 ? (
                 <div className="lm-empty">
                   <span>♫</span>
                   <h4>{wt.noVoiceMemories}</h4>
                   <p>{wt.useVoiceRecorder}</p>
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={() => setActivePage("memories")}
-                  >
-                    {wt.goToAddMemory}
-                  </button>
+                  {accountType !== "family" && (
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={() => setActivePage("memories")}
+                    >
+                      {wt.goToAddMemory}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="lm-media-list">
@@ -4536,26 +5124,30 @@ function App() {
                   <h2>{wt.photoMemoriesTitle}</h2>
                   <p>{wt.browsePhotos}</p>
                 </div>
-                <button
-                  type="button"
-                  className="primary-button"
-                  onClick={() => setActivePage("memories")}
-                >
-                  {wt.addPhoto}
-                </button>
+                {accountType !== "family" && (
+                  <button
+                    type="button"
+                    className="primary-button"
+                    onClick={() => setActivePage("memories")}
+                  >
+                    {wt.addPhoto}
+                  </button>
+                )}
               </div>
               {memories.filter((memory) => memory.image_url).length === 0 ? (
                 <div className="lm-empty">
                   <span>▧</span>
                   <h4>{wt.noPhotoMemories}</h4>
                   <p>{wt.addPhotoToGallery}</p>
-                  <button
-                    type="button"
-                    className="primary-button"
-                    onClick={() => setActivePage("memories")}
-                  >
-                    {wt.goToAddMemory}
-                  </button>
+                  {accountType !== "family" && (
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={() => setActivePage("memories")}
+                    >
+                      {wt.goToAddMemory}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="lm-photo-grid">

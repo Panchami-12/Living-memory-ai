@@ -136,3 +136,50 @@ def add_missing_columns():
             print(f"Database already contains {column_name}.")
 
 
+    # =====================================================
+    # FAMILY PROFILE PIN MIGRATION
+    # =====================================================
+
+    inspector = inspect(engine)
+
+    if "profiles" in inspector.get_table_names():
+
+        existing_profile_columns = {
+            column["name"]
+            for column in inspector.get_columns("profiles")
+        }
+
+        profile_migrations = {
+            "pin_hash": """
+                ALTER TABLE profiles
+                ADD COLUMN pin_hash VARCHAR(255)
+            """,
+
+            "pin_failed_attempts": """
+                ALTER TABLE profiles
+                ADD COLUMN pin_failed_attempts INTEGER
+                NOT NULL DEFAULT 0
+            """,
+
+            "pin_locked_until": """
+                ALTER TABLE profiles
+                ADD COLUMN pin_locked_until TIMESTAMP
+            """,
+        }
+
+        for column_name, sql_statement in profile_migrations.items():
+
+            if column_name not in existing_profile_columns:
+
+                with engine.begin() as connection:
+                    connection.execute(text(sql_statement))
+
+                print(
+                    f"Database updated: {column_name} added to profiles."
+                )
+
+            else:
+                print(
+                    f"Database already contains profiles.{column_name}."
+                )
+

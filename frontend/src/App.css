@@ -1,9 +1,40 @@
+.family-pin-controls {
+  display: grid;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.family-pin-status {
+  font-size: 12px;
+  color: var(--lm-muted, #77738b);
+}
+
+.family-pin-form {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--lm-line, #e5e0ee);
+  border-radius: 12px;
+}
+
+.family-pin-form h4 {
+  margin: 0;
+}
+
+.family-pin-form input {
+  width: 100%;
+  padding: 11px;
+  box-sizing: border-box;
+  border-radius: 9px;
+}
+
+.family-pin-form button {
+  width: 100%;
+}
 /* =========================================================
    LIVING MEMORY AI
    FUTURISTIC MEMORY WEBSITE
    ========================================================= */
-
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap");
 
 :root {
   --bg: #f5f6fb;
@@ -2164,4 +2195,29 @@ footer p {
   .privacy-profile-list {
     grid-template-columns: 1fr;
   }
+}
+.family-login-entry {
+  margin-top: 12px;
+  width: 100%;
+}
+
+.family-login-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.family-login-form label {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--lm-ink);
+}
+
+.family-login-form select {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--lm-line);
+  background: var(--lm-surface);
+  color: var(--lm-ink);
 }

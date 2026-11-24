@@ -10,3 +10,11 @@ class SignupRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+class FamilyProfilesRequest(BaseModel):
+    owner_email: str
+
+
+class FamilyPinLoginRequest(BaseModel):
+    owner_email: str
+    profile_id: int
+    pin: str

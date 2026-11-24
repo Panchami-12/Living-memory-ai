@@ -1,6 +1,6 @@
 import { apiFetch } from "./apiFetch";
 import { AuthenticatedImage, AuthenticatedAudio } from "./AuthenticatedMedia";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import VoiceRecorder from "./VoiceRecorder";
 import "./GrandparentsMode.css";
 
@@ -394,6 +394,16 @@ function GrandparentsMode({
   const [shownMemories, setShownMemories] = useState([]);
   const [showingMemories, setShowingMemories] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState("");
+  const familyMemoriesRef = useRef(null);
+
+  useEffect(() => {
+    if (showingMemories && familyMemoriesRef.current) {
+      familyMemoriesRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [showingMemories, selectedProfile]);
 
   // Add memory states
   const [memoryTitle, setMemoryTitle] = useState("");
@@ -401,7 +411,12 @@ function GrandparentsMode({
   const [memoryType, setMemoryType] = useState("personal");
   const [memoryProfileId, setMemoryProfileId] = useState("");
   const [hiddenFromProfileIds, setHiddenFromProfileIds] = useState([]);
-  const [viewerProfileId, setViewerProfileId] = useState("");
+  // The signed-in family PIN session identifies the viewer automatically.
+  // Owner sessions have full owner access and do not need a viewer selector.
+  const viewerProfileId =
+    localStorage.getItem("account_type") === "family"
+      ? localStorage.getItem("family_profile_id") || ""
+      : "";
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedAudio, setSelectedAudio] = useState(null);
   const [savingMemory, setSavingMemory] = useState(false);
@@ -416,12 +431,122 @@ function GrandparentsMode({
     };
   }, [audioUrl]);
 
-  // Find family profile
+  // Match relationships and profile names in English and the supported
+  // Indian languages. This drives automatic navigation to the right profile.
+  const relationshipAliases = {
+    father: [
+      "father",
+      "dad",
+      "daddy",
+      "papa",
+      "appa",
+      "ಅಪ್ಪ",
+      "ತಂದೆ",
+      "पिता",
+      "पिताजी",
+      "पापा",
+      "அப்பா",
+      "தந்தை",
+      "അച്ഛൻ",
+      "അപ്പൻ",
+    ],
+    mother: [
+      "mother",
+      "mom",
+      "mommy",
+      "mama",
+      "amma",
+      "ಅಮ್ಮ",
+      "ತಾಯಿ",
+      "माँ",
+      "माता",
+      "मम्मी",
+      "அம்மா",
+      "தாய்",
+      "അമ്മ",
+      "മാതാവ്",
+    ],
+    grandfather: [
+      "grandfather",
+      "grandpa",
+      "granddad",
+      "ajja",
+      "ಅಜ್ಜ",
+      "ತಾತ",
+      "दादा",
+      "नाना",
+      "தாத்தா",
+      "அய்யா",
+      "മുത്തച്ഛൻ",
+      "അപ്പൂപ്പൻ",
+    ],
+    grandmother: [
+      "grandmother",
+      "grandma",
+      "granny",
+      "ajji",
+      "ಅಜ್ಜಿ",
+      "ಅಜ್ಜೀ",
+      "दादी",
+      "नानी",
+      "பாட்டி",
+      "அம்மம்மா",
+      "അമ്മൂമ്മ",
+      "മുത്തശ്ശി",
+    ],
+  };
+
+  const normalizeText = (value) =>
+    String(value || "")
+      .trim()
+      .toLocaleLowerCase();
+
+  const questionContains = (question, phrase) => {
+    const q = normalizeText(question);
+    const p = normalizeText(phrase);
+    if (!p) return false;
+
+    // Use word boundaries for Latin words so "dad" does not match
+    // unrelated words; use substring matching for native scripts.
+    if (/^[a-z0-9][a-z0-9\s'-]*$/i.test(p)) {
+      const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`, "i").test(q);
+    }
+    return q.includes(p);
+  };
+
   const findFamilyProfile = (relationship) => {
-    return profiles.find(
-      (profile) =>
-        profile.relationship_type?.trim().toLowerCase() === relationship,
-    );
+    const aliases = relationshipAliases[relationship] || [relationship];
+    return profiles.find((profile) => {
+      const type = normalizeText(profile.relationship_type);
+      const name = normalizeText(profile.name);
+      return (
+        aliases.includes(type) ||
+        aliases.some((alias) => type === alias || type.includes(alias)) ||
+        aliases.includes(name)
+      );
+    });
+  };
+
+  const findProfileMentionedInQuestion = (question) => {
+    // Prefer an exact saved profile name, especially when two profiles have
+    // similar relationship labels.
+    const namedProfile = [...profiles]
+      .filter((profile) => profile.name?.trim())
+      .sort((a, b) => b.name.trim().length - a.name.trim().length)
+      .find((profile) => questionContains(question, profile.name.trim()));
+
+    if (namedProfile) return namedProfile;
+
+    for (const relationship of Object.keys(relationshipAliases)) {
+      const aliases = relationshipAliases[relationship];
+      if (aliases.some((alias) => questionContains(question, alias))) {
+        const profile = findFamilyProfile(relationship);
+        if (profile) return profile;
+      }
+    }
+
+    return null;
   };
 
   // Fetch all memories for a profile
@@ -457,11 +582,6 @@ function GrandparentsMode({
 
   // Browse a family member's memories
   const handleProfileClick = async (profile) => {
-    if (!viewerProfileId) {
-      setStatus(gt.selectViewerFirst);
-      return;
-    }
-
     setLoading(true);
     setStatus(gt.searching);
 
@@ -478,11 +598,6 @@ function GrandparentsMode({
 
   // Display Dad or Mom memories
   const showFamilyMemories = async (relationship) => {
-    if (!viewerProfileId) {
-      setStatus(gt.selectViewerFirst);
-      return;
-    }
-
     const profile = findFamilyProfile(relationship);
 
     if (!profile) {
@@ -494,52 +609,26 @@ function GrandparentsMode({
     setStatus(`${profile.name}${gt.memoriesReadySuffix}`);
   };
 
-  // Ask a question using AI
+  // Ask a question using AI. If a person is named, open that person's
+  // memory page automatically and ask the AI using that profile's memories.
   const handleQuestion = async (spokenText) => {
     if (!spokenText?.trim()) return;
-
-    if (!viewerProfileId) {
-      setStatus(gt.selectQuestionViewer);
-      return;
-    }
 
     setTranscript(spokenText);
     setAnswer("");
     setAudioUrl("");
-    setShowingMemories(false);
-    setShownMemories([]);
     setLoading(true);
-
     setStatus(gt.askSearching);
 
     try {
-      const question = spokenText.toLowerCase();
+      const mentionedProfile = findProfileMentionedInQuestion(spokenText);
 
-      const asksForDad = /ಅಪ್ಪ|ತಂದೆ|dad|father/i.test(question);
-
-      const asksForMom = /ಅಮ್ಮ|ತಾಯಿ|mom|mother/i.test(question);
-
-      const asksToShowMemories =
-        /ನೆನಪು|ಫೋಟೋ|ಚಿತ್ರ|ಧ್ವನಿ|ರೆಕಾರ್ಡಿಂಗ್|ಕಥೆ|memories|photos|recordings|stories/i.test(
-          question,
-        );
-
-      if (asksToShowMemories && asksForDad) {
-        await showFamilyMemories("dad");
-        return;
-      }
-
-      if (asksToShowMemories && asksForMom) {
-        await showFamilyMemories("mom");
-        return;
-      }
-
-      let profileId = null;
-
-      if (asksForDad) {
-        profileId = findFamilyProfile("dad")?.id ?? null;
-      } else if (asksForMom) {
-        profileId = findFamilyProfile("mom")?.id ?? null;
+      if (mentionedProfile) {
+        await loadProfileMemories(mentionedProfile.id, mentionedProfile.name);
+      } else {
+        setShowingMemories(false);
+        setShownMemories([]);
+        setSelectedProfile("");
       }
 
       const chatResponse = await apiFetch(`${apiBaseUrl}/memories/chat`, {
@@ -549,8 +638,10 @@ function GrandparentsMode({
         },
         body: JSON.stringify({
           user_id: userId,
-          profile_id: profileId,
-          viewer_profile_id: Number(viewerProfileId),
+          profile_id: mentionedProfile ? Number(mentionedProfile.id) : null,
+          // Family sessions are bound to their PIN-authenticated profile by
+          // apiFetch/backend. Owner sessions intentionally send no viewer ID.
+          viewer_profile_id: viewerProfileId ? Number(viewerProfileId) : null,
           question: spokenText,
           language,
         }),
@@ -563,15 +654,18 @@ function GrandparentsMode({
       }
 
       const aiAnswer = chatResult.answer?.trim();
-
       if (!aiAnswer) {
         throw new Error(gt.answerError);
       }
 
       setAnswer(aiAnswer);
-      setStatus(gt.answerReady);
+      setStatus(
+        mentionedProfile
+          ? `${mentionedProfile.name}${gt.memoriesReadySuffix}`
+          : gt.answerReady,
+      );
 
-      // Generate voice in the selected language
+      // Generate voice in the selected language.
       const voiceResponse = await fetch(`${TTS_API}/tts/speak`, {
         method: "POST",
         headers: {
@@ -588,12 +682,11 @@ function GrandparentsMode({
       }
 
       const audioBlob = await voiceResponse.blob();
-
       setAudioUrl(URL.createObjectURL(audioBlob));
       setStatus(gt.answerReadyToListen);
     } catch (error) {
       console.error("Grandparents AI error:", error);
-      setStatus(gt.answerError);
+      setStatus(error.message || gt.answerError);
     } finally {
       setLoading(false);
     }
@@ -782,27 +875,6 @@ function GrandparentsMode({
 
         <h2>{gt.askTitle}</h2>
 
-        <label htmlFor="memory-viewer-profile">{gt.viewerLabel}</label>
-        <select
-          id="memory-viewer-profile"
-          value={viewerProfileId}
-          onChange={(event) => {
-            setViewerProfileId(event.target.value);
-            setShownMemories([]);
-            setShowingMemories(false);
-            setSelectedProfile("");
-            setStatus("");
-          }}
-        >
-          <option value="">{gt.selectViewer}</option>
-          {profiles.map((profile) => (
-            <option key={profile.id} value={profile.id}>
-              {profile.name} ({profile.relationship_type})
-            </option>
-          ))}
-        </select>
-        <p className="memory-privacy-help">{gt.viewerHelp}</p>
-
         <VoiceRecorder
           transcriptionLanguage={languageCode}
           onTextGenerated={handleQuestion}
@@ -985,7 +1057,7 @@ function GrandparentsMode({
 
       {/* Display saved memories */}
       {showingMemories && (
-        <section className="family-memories">
+        <section className="family-memories" ref={familyMemoriesRef}>
           <h2>
             {selectedProfile}
             {gt.memoriesSuffix}

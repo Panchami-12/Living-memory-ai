@@ -6,7 +6,23 @@ from app.core.security import create_access_token
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.user import SignupRequest, LoginRequest
+from datetime import datetime, timedelta
+from sqlalchemy import func
 
+from app.models.profile import Profile
+from app.services.family_pin import verify_family_pin
+
+from app.schemas.user import (
+    SignupRequest,
+    LoginRequest,
+    FamilyProfilesRequest,
+    FamilyPinLoginRequest,
+)
+
+from app.core.security import (
+    create_access_token,
+    create_family_access_token,
+)
 
 router = APIRouter(
     prefix="/users",
@@ -166,4 +182,144 @@ def login(
         "email": user.email,
         "access_token": access_token,
         "token_type": "bearer"
+    }
+
+# ============================================================
+# PUBLIC FAMILY PROFILE LIST
+# Only profiles with an owner-configured PIN are listed.
+# ============================================================
+
+@router.post("/family-profiles")
+def get_family_login_profiles(
+    data: FamilyProfilesRequest,
+    db: Session = Depends(get_db),
+):
+    email = data.owner_email.strip().lower()
+
+    if not email:
+        raise HTTPException(
+            status_code=400,
+            detail="Owner email is required.",
+        )
+
+    user = db.query(User).filter(
+        func.lower(User.email) == email
+    ).first()
+
+    if user is None:
+        return {"profiles": []}
+
+    profiles = db.query(Profile).filter(
+        Profile.user_id == user.id,
+        Profile.pin_hash.isnot(None),
+    ).order_by(Profile.name.asc()).all()
+
+    return {
+        "profiles": [
+            {
+                "id": profile.id,
+                "name": profile.name,
+                "relationship_type": profile.relationship_type,
+            }
+            for profile in profiles
+        ]
+    }
+
+
+# ============================================================
+# FAMILY MEMBER PIN LOGIN
+# Five failed attempts -> 15 minute lockout.
+# ============================================================
+
+@router.post("/family-login")
+def family_pin_login(
+    data: FamilyPinLoginRequest,
+    db: Session = Depends(get_db),
+):
+    email = data.owner_email.strip().lower()
+
+    if not email or not data.pin.isdigit() or len(data.pin) != 6:
+        raise HTTPException(
+            status_code=400,
+            detail="Enter a valid six-digit PIN.",
+        )
+
+    user = db.query(User).filter(
+        func.lower(User.email) == email
+    ).first()
+
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid family login details.",
+        )
+
+    profile = db.query(Profile).filter(
+        Profile.id == data.profile_id,
+        Profile.user_id == user.id,
+        Profile.pin_hash.isnot(None),
+    ).first()
+
+    if profile is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid family login details.",
+        )
+
+    now = datetime.utcnow()
+
+    # Check persistent account lockout.
+    if (
+        profile.pin_locked_until is not None
+        and profile.pin_locked_until > now
+    ):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many incorrect PIN attempts. Try again later.",
+        )
+
+    # Verify PIN.
+    if not verify_family_pin(data.pin, profile.pin_hash):
+        profile.pin_failed_attempts = (
+            (profile.pin_failed_attempts or 0) + 1
+        )
+
+        if profile.pin_failed_attempts >= 5:
+            profile.pin_locked_until = (
+                now + timedelta(minutes=15)
+            )
+            db.commit()
+
+            raise HTTPException(
+                status_code=429,
+                detail="Too many incorrect PIN attempts. Try again in 15 minutes.",
+            )
+
+        db.commit()
+
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid family login details.",
+        )
+
+    # Successful login resets the failure counter.
+    profile.pin_failed_attempts = 0
+    profile.pin_locked_until = None
+    db.commit()
+
+    # Issue a separate restricted family session.
+    access_token = create_family_access_token(
+        user_id=user.id,
+        profile_id=profile.id,
+    )
+
+    return {
+        "message": "Family login successful",
+        "account_type": "family",
+        "user_id": user.id,
+        "profile_id": profile.id,
+        "username": profile.name,
+        "relationship": profile.relationship_type,
+        "access_token": access_token,
+        "token_type": "bearer",
     }

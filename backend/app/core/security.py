@@ -46,17 +46,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 # TOKEN GENERATION
 # =========================================================
 
-def create_access_token(user_id: int) -> str:
-    now = datetime.now(timezone.utc)
-
-    payload = {
-        "sub": str(user_id),
-        "iat": now,
-        "exp": now + timedelta(
-            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
-        ),
-    }
-
+def _encode_token(payload: dict) -> str:
     return jwt.encode(
         payload,
         SECRET_KEY,
@@ -64,14 +54,52 @@ def create_access_token(user_id: int) -> str:
     )
 
 
+def create_access_token(user_id: int) -> str:
+    """Existing owner login token. Kept backward compatible."""
+    now = datetime.now(timezone.utc)
+
+    payload = {
+        "sub": str(user_id),
+        "token_type": "owner",
+        "iat": now,
+        "exp": now + timedelta(
+            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+        ),
+    }
+
+    return _encode_token(payload)
+
+
+def create_family_access_token(
+    user_id: int,
+    profile_id: int,
+) -> str:
+    """Restricted token for one family profile."""
+    now = datetime.now(timezone.utc)
+
+    payload = {
+        "sub": str(user_id),
+        "token_type": "family",
+        "profile_id": int(profile_id),
+        "iat": now,
+        "exp": now + timedelta(
+            minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+        ),
+    }
+
+    return _encode_token(payload)
+
+
 # =========================================================
-# AUTHENTICATED USER
+# AUTHENTICATION CONTEXT
 # =========================================================
 
-def get_current_user(
-    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+def get_auth_context(
+    credentials: HTTPAuthorizationCredentials | None = Depends(
+        bearer_scheme
+    ),
     db: Session = Depends(get_db),
-) -> User:
+) -> dict:
 
     unauthorized = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -90,6 +118,10 @@ def get_current_user(
         )
 
         user_id = int(payload.get("sub"))
+        token_type = payload.get("token_type", "owner")
+
+        if token_type not in ("owner", "family"):
+            raise unauthorized
 
     except (InvalidTokenError, TypeError, ValueError):
         raise unauthorized
@@ -101,41 +133,120 @@ def get_current_user(
     if user is None:
         raise unauthorized
 
-    return user
+    profile_id = None
+
+    if token_type == "family":
+        try:
+            profile_id = int(payload.get("profile_id"))
+        except (TypeError, ValueError):
+            raise unauthorized
+
+        # Import locally to avoid circular imports.
+        from app.models.profile import Profile
+
+        profile = db.query(Profile).filter(
+            Profile.id == profile_id,
+            Profile.user_id == user.id,
+            Profile.pin_hash.isnot(None),
+        ).first()
+
+        # Removing a PIN also invalidates existing family sessions.
+        if profile is None:
+            raise unauthorized
+
+    return {
+        "user": user,
+        "token_type": token_type,
+        "profile_id": profile_id,
+    }
 
 
 # =========================================================
-# REQUEST OWNERSHIP CHECK
+# AUTHENTICATED USER
+# =========================================================
+
+def get_current_user(
+    auth: dict = Depends(get_auth_context),
+) -> User:
+    return auth["user"]
+
+
+# =========================================================
+# REQUEST OWNERSHIP AND FAMILY ACCESS CHECK
 # =========================================================
 
 async def authorize_request_user(
     request: Request,
-    current_user: User = Depends(get_current_user),
+    auth: dict = Depends(get_auth_context),
     db: Session = Depends(get_db),
 ) -> User:
 
-    # Import models here to avoid circular imports.
+    current_user = auth["user"]
+    token_type = auth["token_type"]
+    family_profile_id = auth["profile_id"]
+
+    # Import models locally to avoid circular imports.
     from app.models.memory import Memory
     from app.models.profile import Profile
     from app.models.time_capsule import TimeCapsule
 
-    supplied_ids = request.query_params.getlist("user_id")
+    path = request.url.path.rstrip("/")
 
-    # Read JSON body without exposing its contents.
+    # -----------------------------------------------------
+    # FAMILY SESSION: READ-ONLY MEMORY ACCESS
+    # -----------------------------------------------------
+
+    if token_type == "family":
+
+        is_memory_route = (
+            path == "/memories"
+            or path.startswith("/memories/")
+        )
+
+        is_family_chat = (
+            path == "/memories/chat"
+            and request.method == "POST"
+        )
+
+        if not is_memory_route:
+            raise HTTPException(
+                status_code=403,
+                detail="Family accounts cannot access this resource.",
+            )
+
+        if request.method != "GET" and not is_family_chat:
+            raise HTTPException(
+                status_code=403,
+                detail="Family accounts have read-only access.",
+            )
+
+    # -----------------------------------------------------
+    # READ REQUEST BODY WHEN JSON
+    # -----------------------------------------------------
+
+    body = {}
+
     content_type = request.headers.get("content-type", "")
 
     if "application/json" in content_type:
         try:
-            body = await request.json()
+            parsed_body = await request.json()
 
-            if isinstance(body, dict) and "user_id" in body:
-                supplied_ids.append(body["user_id"])
+            if isinstance(parsed_body, dict):
+                body = parsed_body
 
         except Exception:
             pass
 
-    # Require an explicit user_id wherever the endpoint
-    # accepts one, including endpoints with default user_id=1.
+    # -----------------------------------------------------
+    # VERIFY ALL SUPPLIED OWNER IDS
+    # -----------------------------------------------------
+
+    supplied_ids = request.query_params.getlist("user_id")
+
+    if "user_id" in body:
+        supplied_ids.append(body["user_id"])
+
     route = request.scope.get("route")
     endpoint = getattr(route, "endpoint", None)
 
@@ -146,7 +257,12 @@ async def authorize_request_user(
                 detail="user_id is required.",
             )
 
-    # Verify every supplied user_id.
+    if token_type == "family" and not supplied_ids:
+        raise HTTPException(
+            status_code=400,
+            detail="Owner account ID is required.",
+        )
+
     for supplied_id in supplied_ids:
         try:
             if isinstance(supplied_id, bool):
@@ -166,7 +282,56 @@ async def authorize_request_user(
                 detail="You cannot access another user's data.",
             )
 
-    # Verify ownership of resources identified in the URL.
+    # -----------------------------------------------------
+    # FAMILY SESSION: VIEWER ID MUST MATCH TOKEN
+    # -----------------------------------------------------
+
+    if token_type == "family":
+
+        if request.method == "POST":
+            supplied_viewers = (
+                [body["viewer_profile_id"]]
+                if "viewer_profile_id" in body
+                else []
+            )
+        else:
+            supplied_viewers = request.query_params.getlist(
+                "viewer_profile_id"
+            )
+
+        if len(supplied_viewers) != 1:
+            raise HTTPException(
+                status_code=403,
+                detail="Family viewer identity is required.",
+            )
+
+        try:
+            supplied_viewer_id = int(supplied_viewers[0])
+        except (TypeError, ValueError):
+            raise HTTPException(
+                status_code=403,
+                detail="Invalid family viewer identity.",
+            )
+
+        if supplied_viewer_id != family_profile_id:
+            raise HTTPException(
+                status_code=403,
+                detail="You cannot view memories as another family member.",
+            )
+
+        request.state.viewer_profile_id = family_profile_id
+        request.state.family_user_id = current_user.id
+        request.state.is_family_session = True
+
+    else:
+        request.state.viewer_profile_id = None
+        request.state.family_user_id = current_user.id
+        request.state.is_family_session = False
+
+    # -----------------------------------------------------
+    # VERIFY RESOURCE OWNERSHIP IN URL
+    # -----------------------------------------------------
+
     resource_models = {
         "memory_id": Memory,
         "profile_id": Profile,
